@@ -178,6 +178,73 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	mmd_pmx_t pmx = mmd_pmx_t(&ks);
 	Node3D *root = memnew(Node3D);
 
+	std::vector<std::unique_ptr<mmd_pmx_t::bone_t> > *bones = pmx.bones();
+
+	Skeleton3D *skeleton = memnew(Skeleton3D);
+
+	uint32_t bone_count = pmx.bone_count();
+
+	for (int32_t bone_i = 0; bone_i < bone_count; bone_i++) {
+		std::string universal = bones->at(bone_i)->english_name()->value();
+		std::string common = bones->at(bone_i)->name()->value();
+		String output_name;
+		if (universal.empty()) {
+			output_name.parse_utf8(common.data());
+		} else {
+			output_name.parse_utf8(universal.data());
+		}
+		ERR_CONTINUE(output_name.is_empty());
+		if (skeleton->find_bone(output_name) != -1) {
+			output_name.parse_utf8(common.data());
+		}
+		BoneId bone = skeleton->get_bone_count();
+		skeleton->add_bone(output_name);
+		if (!bones->at(bone_i)->enabled()) {
+			skeleton->set_bone_enabled(bone, false);
+		}
+	}
+	for (int32_t bone_i = 0; bone_i < bone_count; bone_i++) {
+		Transform3D xform;
+		real_t x = bones->at(bone_i)->position()->x();
+		real_t y = bones->at(bone_i)->position()->y();
+		real_t z = bones->at(bone_i)->position()->z();
+		xform.origin = Vector3(x, y, z);
+		int64_t parent_index = -1;
+		switch (bones->at(bone_i)->parent_index()->size()) {
+			case 1: {
+				parent_index = bones->at(bone_i)->parent_index()->value();
+				if (parent_index == UINT8_MAX) {
+					parent_index = -1;
+				}
+			} break;
+			case 2: {
+				parent_index = bones->at(bone_i)->parent_index()->value();
+				if (parent_index == UINT16_MAX) {
+					parent_index = -1;
+				}
+			} break;
+			case 4: {
+				parent_index = bones->at(bone_i)->parent_index()->value();
+				if (parent_index == UINT32_MAX) {
+					parent_index = -1;
+				}
+			} break;
+			default:
+				break;
+				// nothing
+		}
+		if (parent_index != -1) {
+			real_t parent_x = bones->at(parent_index)->position()->x();
+			real_t parent_y = bones->at(parent_index)->position()->y();
+			real_t parent_z = bones->at(parent_index)->position()->z();
+			xform.origin -= Vector3(parent_x, parent_y, parent_z);
+		}
+		skeleton->set_bone_rest(bone_i, xform);
+		skeleton->set_bone_parent(bone_i, parent_index);
+	}
+	root->add_child(skeleton);
+	skeleton->set_owner(root);
+	skeleton->localize_rests();
 	std::vector<std::unique_ptr<mmd_pmx_t::material_t> > *materials = pmx.materials();
 	uint32_t face_start = 0;
 	for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
@@ -264,9 +331,11 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		String model_name = pick_universal_or_common(pmx.header()->english_model_name()->value(), pmx.header()->model_name()->value(), pmx.header()->encoding());
 		mesh_3d->set_name(material_name);
 		mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, material_name);
-		root->add_child(mesh_3d);
+		skeleton->add_child(mesh_3d);
+		mesh_3d->set_skin(skeleton->register_skin(nullptr)->get_skin());
 		mesh_3d->set_mesh(mesh);
 		mesh_3d->set_owner(root);
+		mesh_3d->set_skeleton_path(NodePath(".."));
 	}
 	std::vector<std::unique_ptr<mmd_pmx_t::rigid_body_t> > *rigid_bodies = pmx.rigid_bodies();
 	for (uint32_t rigid_bodies_i = 0; rigid_bodies_i < pmx.rigid_body_count(); rigid_bodies_i++) {
