@@ -335,7 +335,6 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		mesh_3d->set_skin(skeleton->register_skin(nullptr)->get_skin());
 		mesh_3d->set_mesh(mesh);
 		mesh_3d->set_owner(root);
-		mesh_3d->set_skeleton_path(NodePath(".."));
 	}
 	std::vector<std::unique_ptr<mmd_pmx_t::rigid_body_t> > *rigid_bodies = pmx.rigid_bodies();
 	for (uint32_t rigid_bodies_i = 0; rigid_bodies_i < pmx.rigid_body_count(); rigid_bodies_i++) {
