@@ -175,8 +175,8 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	Skeleton3D *skeleton = memnew(Skeleton3D);
 	uint32_t bone_count = pmx.bone_count();
 	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		String output_name = pick_universal_or_common(bones->at(bone_i)->english_name()->value(), 
-			bones->at(bone_i)->name()->value(), pmx.header()->encoding());
+		String output_name = pick_universal_or_common(bones->at(bone_i)->english_name()->value(),
+				bones->at(bone_i)->name()->value(), pmx.header()->encoding());
 		BoneId bone = skeleton->get_bone_count();
 		skeleton->add_bone(output_name);
 		if (!bones->at(bone_i)->enabled()) {
@@ -234,30 +234,11 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		String material_name = pick_universal_or_common(materials->at(material_i)->english_name()->value(), materials->at(material_i)->name()->value(), pmx.header()->encoding());
 		Ref<StandardMaterial3D> material;
 		material.instantiate();
-		int64_t texture_size = materials->at(material_i)->texture_index()->size();
 		String texture_path;
 		int64_t texture_index = materials->at(material_i)->texture_index()->value();
-		switch (texture_size) {
-			case 1: {
-				if (texture_index != UINT8_MAX) {
-					std::string raw_texture_path = pmx.textures()->at(texture_index)->name()->value();
-					texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
-				}
-			} break;
-			case 2: {
-				if (texture_index != UINT16_MAX) {
-					std::string raw_texture_path = pmx.textures()->at(texture_index)->name()->value();
-					texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
-				}
-			} break;
-			case 4: {
-				if (texture_index != UINT32_MAX) {
-					std::string raw_texture_path = pmx.textures()->at(texture_index)->name()->value();
-					texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
-				}
-			} break;
-			default:
-				break;
+		if (is_valid_index(materials->at(material_i)->texture_index())) {
+			std::string raw_texture_path = pmx.textures()->at(texture_index)->name()->value();
+			texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
 		}
 		if (!texture_path.is_empty()) {
 			texture_path = texture_path.simplify_path();
