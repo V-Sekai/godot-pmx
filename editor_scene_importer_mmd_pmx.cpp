@@ -226,33 +226,15 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	skeleton->set_owner(root);
 	std::vector<std::unique_ptr<mmd_pmx_t::material_t> > *materials = pmx.materials();
 	uint32_t face_start = 0;
-	for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
-		Ref<SurfaceTool> surface;
-		surface.instantiate();
-		surface->begin(Mesh::PRIMITIVE_TRIANGLES);
-		std::vector<std::unique_ptr<mmd_pmx_t::vertex_t> > *vertices = pmx.vertices();
-		std::vector<std::unique_ptr<mmd_pmx_t::face_t> > *faces = pmx.faces();
-		uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
-		// Add the vertices directly without indices
-		for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
-			uint32_t index = faces->at(face_i)->indices()->at(0)->value();
-			add_vertex(surface, vertices->at(index).get());
-			index = faces->at(face_i)->indices()->at(2)->value();
-			add_vertex(surface, vertices->at(index).get());
-			index = faces->at(face_i)->indices()->at(1)->value();
-			add_vertex(surface, vertices->at(index).get());
-		}
-		face_start = face_end;
-		// Generate indices for this surface since we can't share vertices
-		surface->index();
-		Array mesh_array = surface->commit_to_arrays();
-		surface->clear();
-		String material_name = pick_universal_or_common(materials->at(material_i)->english_name()->value(), materials->at(material_i)->name()->value(), pmx.header()->encoding());
+
+	Vector<Ref<StandardMaterial3D> > material_cache;
+	material_cache.resize(pmx.material_count());
+	for (int32_t material_cache_i = 0; material_cache_i < pmx.material_count(); material_cache_i++) {
 		Ref<StandardMaterial3D> material;
 		material.instantiate();
 		String texture_path;
-		int64_t texture_index = materials->at(material_i)->texture_index()->value();
-		if (is_valid_index(materials->at(material_i)->texture_index())) {
+		int64_t texture_index = materials->at(material_cache_i)->texture_index()->value();
+		if (is_valid_index(materials->at(material_cache_i)->texture_index())) {
 			std::string raw_texture_path = pmx.textures()->at(texture_index)->name()->value();
 			texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
 		}
@@ -282,14 +264,40 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			Ref<Texture> base_color_tex = ResourceLoader::load(texture_path);
 			material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, base_color_tex);
 		}
-		mmd_pmx_t::color4_t *diffuse = materials->at(material_i)->diffuse();
+		mmd_pmx_t::color4_t *diffuse = materials->at(material_cache_i)->diffuse();
 		material->set_albedo(Color(diffuse->r(), diffuse->g(), diffuse->b(), diffuse->a()));
+		String material_name = pick_universal_or_common(materials->at(material_cache_i)->english_name()->value(),
+				materials->at(material_cache_i)->name()->value(), pmx.header()->encoding());
+		material->set_name(material_name);
+		material_cache.write[material_cache_i] = material;
+	}
+	for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
+		Ref<SurfaceTool> surface;
+		surface.instantiate();
+		surface->begin(Mesh::PRIMITIVE_TRIANGLES);
+		std::vector<std::unique_ptr<mmd_pmx_t::vertex_t> > *vertices = pmx.vertices();
+		std::vector<std::unique_ptr<mmd_pmx_t::face_t> > *faces = pmx.faces();
+		uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
+		// Add the vertices directly without indices
+		for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
+			uint32_t index = faces->at(face_i)->indices()->at(0)->value();
+			add_vertex(surface, vertices->at(index).get());
+			index = faces->at(face_i)->indices()->at(2)->value();
+			add_vertex(surface, vertices->at(index).get());
+			index = faces->at(face_i)->indices()->at(1)->value();
+			add_vertex(surface, vertices->at(index).get());
+		}
+		face_start = face_end;
+		// Generate indices for this surface since we can't share vertices
+		surface->index();
+		Array mesh_array = surface->commit_to_arrays();
+		surface->clear();
+		Ref<Material> material = material_cache[material_i];
 		EditorSceneImporterMeshNode3D *mesh_3d = memnew(EditorSceneImporterMeshNode3D);
 		Ref<EditorSceneImporterMesh> mesh;
 		mesh.instantiate();
-		String model_name = pick_universal_or_common(pmx.header()->english_model_name()->value(), pmx.header()->model_name()->value(), pmx.header()->encoding());
-		mesh_3d->set_name(material_name);
-		mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, material_name);
+		mesh_3d->set_name(material->get_name());
+		mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, material->get_name());
 		skeleton->add_child(mesh_3d);
 		mesh_3d->set_skin(skeleton->register_skin(nullptr)->get_skin());
 		mesh_3d->set_mesh(mesh);
