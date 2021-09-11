@@ -168,10 +168,47 @@ void PackedSceneMMDPMX::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("import_mmd_pmx_scene", "path", "flags", "bake_fps", "state"),
 			&PackedSceneMMDPMX::import_mmd_pmx_scene, DEFVAL(0), DEFVAL(1000.0f), DEFVAL(Ref<PMXMMDState>()));
 }
+
 Node *PackedSceneMMDPMX::import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state) {
 	Error err = FAILED;
 	List<String> deps;
 	return import_scene(p_path, p_flags, p_bake_fps, &deps, &err, r_state);
+}
+
+Skeleton3D *PackedSceneMMDPMX::import_skeleton(const mmd_pmx_t &pmx) const {
+	std::vector<std::unique_ptr<mmd_pmx_t::bone_t> > *bones = pmx.bones();
+	Skeleton3D *skeleton = memnew(Skeleton3D);
+	uint32_t bone_count = pmx.bone_count();
+
+	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
+		String output_name = pick_universal_or_common(bones->at(bone_i)->english_name()->value(),
+				bones->at(bone_i)->name()->value(), pmx.header()->encoding());
+		BoneId bone = skeleton->get_bone_count();
+		skeleton->add_bone(output_name);
+		if (!bones->at(bone_i)->enabled()) {
+			skeleton->set_bone_enabled(bone, false);
+		}
+	}
+
+	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
+		Transform3D xform;
+		mmd_pmx_t::bone_t *bone = bones->at(bone_i).get();
+		xform.origin = Vector3(bone->position()->x() * mmd_unit_conversion,
+							   bone->position()->y() * mmd_unit_conversion,
+							   bone->position()->z() * mmd_unit_conversion);
+		int64_t parent_index = -1;
+		if (is_valid_index(bone->parent_index())) {
+			parent_index = bone->parent_index()->value();
+			xform.origin -= Vector3(bone->position()->x() * mmd_unit_conversion,
+									bone->position()->y() * mmd_unit_conversion,
+									bone->position()->z() * mmd_unit_conversion);
+		}
+		skeleton->set_bone_rest(bone_i, xform);
+		if (parent_index >= 0) {
+			skeleton->set_bone_parent(bone_i, parent_index);
+		}
+	}
+	return skeleton;
 }
 
 Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
@@ -187,41 +224,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	kaitai::kstream ks(&ifs);
 	mmd_pmx_t pmx = mmd_pmx_t(&ks);
 	Node3D *root = memnew(Node3D);
-	std::vector<std::unique_ptr<mmd_pmx_t::bone_t> > *bones = pmx.bones();
-	Skeleton3D *skeleton = memnew(Skeleton3D);
-	uint32_t bone_count = pmx.bone_count();
-	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		String output_name = pick_universal_or_common(bones->at(bone_i)->english_name()->value(),
-				bones->at(bone_i)->name()->value(), pmx.header()->encoding());
-		BoneId bone = skeleton->get_bone_count();
-		skeleton->add_bone(output_name);
-		if (!bones->at(bone_i)->enabled()) {
-			skeleton->set_bone_enabled(bone, false);
-		}
-	}
-	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		Transform3D xform;
-		real_t x = bones->at(bone_i)->position()->x();
-		x *= mmd_unit_conversion;
-		real_t y = bones->at(bone_i)->position()->y();
-		y *= mmd_unit_conversion;
-		real_t z = bones->at(bone_i)->position()->z();
-		z *= mmd_unit_conversion;
-		xform.origin = Vector3(x, y, z);
-		int64_t parent_index = -1;
-		if (is_valid_index(bones->at(bone_i)->parent_index())) {
-			parent_index = bones->at(bone_i)->parent_index()->value();
-			real_t parent_x = bones->at(parent_index)->position()->x();
-			parent_x *= mmd_unit_conversion;
-			real_t parent_y = bones->at(parent_index)->position()->y();
-			parent_y *= mmd_unit_conversion;
-			real_t parent_z = bones->at(parent_index)->position()->z();
-			parent_z *= mmd_unit_conversion;
-			xform.origin -= Vector3(parent_x, parent_y, parent_z);
-		}
-		skeleton->set_bone_rest(bone_i, xform);
-		skeleton->set_bone_parent(bone_i, parent_index);
-	}
+	Skeleton3D *skeleton = import_skeleton(pmx);
 	root->add_child(skeleton);
 	skeleton->set_owner(root);
 	std::vector<std::unique_ptr<mmd_pmx_t::material_t> > *materials = pmx.materials();
@@ -344,7 +347,7 @@ String PackedSceneMMDPMX::convert_string(const std::string &s, uint8_t encoding)
 	return output;
 }
 
-String PackedSceneMMDPMX::pick_universal_or_common(std::string p_universal, std::string p_common, uint8_t encoding) {
+String PackedSceneMMDPMX::pick_universal_or_common(std::string p_universal, std::string p_common, uint8_t encoding) const {
 	if (p_common.empty()) {
 		return convert_string(p_universal, encoding);
 	} else {

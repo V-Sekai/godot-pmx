@@ -39,6 +39,7 @@
 #include "thirdparty/ksy/mmd_pmx.h"
 
 class Animation;
+class Skeleton3D;
 
 class EditorSceneImporterMMDPMX : public EditorSceneImporter {
 	GDCLASS(EditorSceneImporterMMDPMX, EditorSceneImporter);
@@ -62,10 +63,11 @@ class PackedSceneMMDPMX : public PackedScene {
 	GDCLASS(PackedSceneMMDPMX, PackedScene);
 
 	const real_t mmd_unit_conversion = 0.079f;
-	String pick_universal_or_common(std::string p_universal, std::string p_common, uint8_t encoding);
+	String pick_universal_or_common(std::string p_universal, std::string p_common, uint8_t encoding) const;
 	void add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t* vertex) const;
-	bool is_valid_index(mmd_pmx_t::sized_index_t* index) const;
-	String convert_string(const std::string& s, uint8_t encoding) const;
+	bool is_valid_index(mmd_pmx_t::sized_index_t *index) const;
+	String convert_string(const std::string &s, uint8_t encoding) const;
+	Skeleton3D *import_skeleton(const mmd_pmx_t &pmx) const;
 
 protected:
 	static void _bind_methods();
