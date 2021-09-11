@@ -40,7 +40,6 @@
 
 class Animation;
 
-#ifdef TOOLS_ENABLED
 class EditorSceneImporterMMDPMX : public EditorSceneImporter {
 	GDCLASS(EditorSceneImporterMMDPMX, EditorSceneImporter);
 
@@ -54,7 +53,6 @@ public:
 	virtual Ref<Animation> import_animation(const String &p_path,
 			uint32_t p_flags, int p_bake_fps) override;
 };
-#endif
 
 class PMXMMDState : public Resource {
 	GDCLASS(PMXMMDState, Resource);
