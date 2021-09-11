@@ -225,19 +225,11 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	root->add_child(skeleton);
 	skeleton->set_owner(root);
 	std::vector<std::unique_ptr<mmd_pmx_t::material_t> > *materials = pmx.materials();
-	uint32_t face_start = 0;
-
-	Vector<Ref<StandardMaterial3D> > material_cache;
-	material_cache.resize(pmx.material_count());
-	for (int32_t material_cache_i = 0; material_cache_i < pmx.material_count(); material_cache_i++) {
-		Ref<StandardMaterial3D> material;
-		material.instantiate();
-		String texture_path;
-		int64_t texture_index = materials->at(material_cache_i)->texture_index()->value();
-		if (is_valid_index(materials->at(material_cache_i)->texture_index())) {
-			std::string raw_texture_path = pmx.textures()->at(texture_index)->name()->value();
-			texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
-		}
+	Vector<Ref<Texture2D> > texture_cache;
+	texture_cache.resize(pmx.texture_count());
+	for (int32_t texture_cache_i = 0; texture_cache_i < pmx.texture_count(); texture_cache_i++) {
+		std::string raw_texture_path = pmx.textures()->at(texture_cache_i)->name()->value();
+		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
 		if (!texture_path.is_empty()) {
 			texture_path = texture_path.simplify_path();
 			Vector<String> path_components = texture_path.split("/");
@@ -262,7 +254,19 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			}
 			print_verbose(vformat("Found texture %s", texture_path));
 			Ref<Texture> base_color_tex = ResourceLoader::load(texture_path);
-			material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, base_color_tex);
+			texture_cache.write[texture_cache_i] = base_color_tex;
+		}
+	}
+
+	Vector<Ref<StandardMaterial3D> > material_cache;
+	material_cache.resize(pmx.material_count());
+	for (int32_t material_cache_i = 0; material_cache_i < pmx.material_count(); material_cache_i++) {
+		Ref<StandardMaterial3D> material;
+		material.instantiate();
+		String texture_path;
+		int64_t texture_index = materials->at(material_cache_i)->texture_index()->value();
+		if (is_valid_index(materials->at(material_cache_i)->texture_index()) && texture_index < texture_cache.size()) {
+			material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture_cache[texture_index]);
 		}
 		mmd_pmx_t::color4_t *diffuse = materials->at(material_cache_i)->diffuse();
 		material->set_albedo(Color(diffuse->r(), diffuse->g(), diffuse->b(), diffuse->a()));
@@ -271,6 +275,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		material->set_name(material_name);
 		material_cache.write[material_cache_i] = material;
 	}
+	uint32_t face_start = 0;
 	for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
 		Ref<SurfaceTool> surface;
 		surface.instantiate();
