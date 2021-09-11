@@ -111,7 +111,7 @@ void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t
 			} break;
 			case mmd_pmx_t::BONE_TYPE_BDEF2: {
 				mmd_pmx_t::bdef2_weights_t *pmx_weights = (mmd_pmx_t::bdef2_weights_t *)vertex->skin_weights();
-				for (int32_t count = 0; count < 2; count++) {
+				for (uint32_t count = 0; count < 2; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
 						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
 						weights.write[count] = pmx_weights->weights()->at(count);
@@ -120,7 +120,7 @@ void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t
 			} break;
 			case mmd_pmx_t::BONE_TYPE_BDEF4: {
 				mmd_pmx_t::bdef4_weights_t *pmx_weights = (mmd_pmx_t::bdef4_weights_t *)vertex->skin_weights();
-				for (int32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
+				for (uint32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
 						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
 						weights.write[count] = pmx_weights->weights()->at(count);
@@ -130,7 +130,7 @@ void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t
 			case mmd_pmx_t::BONE_TYPE_SDEF: {
 				// TODO implement 2021-09-10 fire
 				mmd_pmx_t::sdef_weights_t *pmx_weights = (mmd_pmx_t::sdef_weights_t *)vertex->skin_weights();
-				for (int32_t count = 0; count < 2; count++) {
+				for (uint32_t count = 0; count < 2; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
 						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
 						weights.write[count] = pmx_weights->weights()->at(count);
@@ -141,7 +141,7 @@ void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t
 			default: {
 				// TODO implement 2021-09-10 fire
 				mmd_pmx_t::qdef_weights_t *pmx_weights = (mmd_pmx_t::qdef_weights_t *)vertex->skin_weights();
-				for (int32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
+				for (uint32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
 						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
 						weights.write[count] = pmx_weights->weights()->at(count);
@@ -227,7 +227,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	std::vector<std::unique_ptr<mmd_pmx_t::material_t> > *materials = pmx.materials();
 	Vector<Ref<Texture2D> > texture_cache;
 	texture_cache.resize(pmx.texture_count());
-	for (int32_t texture_cache_i = 0; texture_cache_i < pmx.texture_count(); texture_cache_i++) {
+	for (uint32_t texture_cache_i = 0; texture_cache_i < pmx.texture_count(); texture_cache_i++) {
 		std::string raw_texture_path = pmx.textures()->at(texture_cache_i)->name()->value();
 		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
 		if (!texture_path.is_empty()) {
@@ -260,7 +260,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 
 	Vector<Ref<StandardMaterial3D> > material_cache;
 	material_cache.resize(pmx.material_count());
-	for (int32_t material_cache_i = 0; material_cache_i < pmx.material_count(); material_cache_i++) {
+	for (uint32_t material_cache_i = 0; material_cache_i < pmx.material_count(); material_cache_i++) {
 		Ref<StandardMaterial3D> material;
 		material.instantiate();
 		String texture_path;
