@@ -179,18 +179,8 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	uint32_t bone_count = pmx.bone_count();
 
 	for (int32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		std::string universal = bones->at(bone_i)->english_name()->value();
-		std::string common = bones->at(bone_i)->name()->value();
-		String output_name;
-		if (universal.empty()) {
-			output_name.parse_utf8(common.data());
-		} else {
-			output_name.parse_utf8(universal.data());
-		}
-		ERR_CONTINUE(output_name.is_empty());
-		if (skeleton->find_bone(output_name) != -1) {
-			output_name.parse_utf8(common.data());
-		}
+		String output_name = pick_universal_or_common(bones->at(bone_i)->english_name()->value(), 
+			bones->at(bone_i)->name()->value(), pmx.header()->encoding());
 		BoneId bone = skeleton->get_bone_count();
 		skeleton->add_bone(output_name);
 		if (!bones->at(bone_i)->enabled()) {
