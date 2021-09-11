@@ -337,9 +337,9 @@ String PackedSceneMMDPMX::convert_string(const std::string &s, uint8_t encoding)
 }
 
 String PackedSceneMMDPMX::pick_universal_or_common(std::string p_universal, std::string p_common, uint8_t encoding) {
-	if (p_universal.empty()) {
-		return convert_string(p_common, encoding);
-	} else {
+	if (p_common.empty()) {
 		return convert_string(p_universal, encoding);
+	} else {
+		return convert_string(p_common, encoding);
 	}
 }
