@@ -127,23 +127,39 @@ void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t
 					}
 				}
 			} break;
-			case mmd_pmx_t::BONE_TYPE_SDEF:
+			case mmd_pmx_t::BONE_TYPE_SDEF: {
+				// TODO implement 2021-09-10 fire
+				mmd_pmx_t::sdef_weights_t *pmx_weights = (mmd_pmx_t::sdef_weights_t *)vertex->skin_weights();
+				for (int32_t count = 0; count < 2; count++) {
+					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
+						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
+						weights.write[count] = pmx_weights->weights()->at(count);
+					}
+				}
+			} break;
 			case mmd_pmx_t::BONE_TYPE_QDEF:
-			default:
-				break;
-				// nothing
+			default: {
+				// TODO implement 2021-09-10 fire
+				mmd_pmx_t::qdef_weights_t *pmx_weights = (mmd_pmx_t::qdef_weights_t *)vertex->skin_weights();
+				for (int32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
+					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
+						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
+						weights.write[count] = pmx_weights->weights()->at(count);
+					}
+				}
+			} break;
 		}
+		surface->set_bones(bones);
+		real_t renorm = weights[0] + weights[1] + weights[2] + weights[3];
+		if (renorm != 0.0 && renorm != 1.0) {
+			weights.write[0] /= renorm;
+			weights.write[1] /= renorm;
+			weights.write[2] /= renorm;
+			weights.write[3] /= renorm;
+		}
+		surface->set_weights(weights);
+		surface->add_vertex(point);
 	}
-	surface->set_bones(bones);
-	real_t renorm = weights[0] + weights[1] + weights[2] + weights[3];
-	if (renorm != 0.0 && renorm != 1.0) {
-		weights.write[0] /= renorm;
-		weights.write[1] /= renorm;
-		weights.write[2] /= renorm;
-		weights.write[3] /= renorm;
-	}
-	surface->set_weights(weights);
-	surface->add_vertex(point);
 }
 
 void PackedSceneMMDPMX::_bind_methods() {
