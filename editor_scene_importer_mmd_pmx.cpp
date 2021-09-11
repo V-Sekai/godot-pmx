@@ -195,26 +195,19 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		int64_t parent_index = -1;
 		if (is_valid_index(bones->at(bone_i)->parent_index())) {
 			parent_index = bones->at(bone_i)->parent_index()->value();
+			real_t parent_x = bones->at(parent_index)->position()->x();
+			parent_x *= mmd_unit_conversion;
+			real_t parent_y = bones->at(parent_index)->position()->y();
+			parent_y *= mmd_unit_conversion;
+			real_t parent_z = bones->at(parent_index)->position()->z();
+			parent_z *= mmd_unit_conversion;
+			xform.origin -= Vector3(parent_x, parent_y, parent_z);
 		}
 		skeleton->set_bone_rest(bone_i, xform);
 		skeleton->set_bone_parent(bone_i, parent_index);
-	}	
-	for (int32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		Transform3D xform = skeleton->get_bone_rest(bone_i);
-		BoneId parent = skeleton->get_bone_parent(bone_i);
-		// Assume bone_i is topologically sorted
-		for (int32_t iterations = 0; iterations < bone_count; iterations++) {
-			if (parent == -1) {
-				break;
-			}
-			xform = xform * skeleton->get_bone_rest(parent).affine_inverse();
-			parent = skeleton->get_bone_parent(parent);
-		}
-		skeleton->set_bone_rest(bone_i, xform);
 	}
 	root->add_child(skeleton);
 	skeleton->set_owner(root);
-	skeleton->localize_rests();
 	std::vector<std::unique_ptr<mmd_pmx_t::material_t> > *materials = pmx.materials();
 	uint32_t face_start = 0;
 	for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
