@@ -192,7 +192,12 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		real_t z = bones->at(bone_i)->position()->z();
 		z *= mmd_unit_conversion;
 		xform.origin = Vector3(x, y, z);
+		int64_t parent_index = -1;
+		if (is_valid_index(bones->at(bone_i)->parent_index())) {
+			parent_index = bones->at(bone_i)->parent_index()->value();
+		}
 		skeleton->set_bone_rest(bone_i, xform);
+		skeleton->set_bone_parent(bone_i, parent_index);
 	}
 	root->add_child(skeleton);
 	skeleton->set_owner(root);
