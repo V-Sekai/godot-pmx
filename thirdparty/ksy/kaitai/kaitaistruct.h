@@ -1,7 +1,7 @@
 #ifndef KAITAI_STRUCT_H
 #define KAITAI_STRUCT_H
 
-#include <kaitai/kaitaistream.h>
+#include "kaitaistream.h"
 
 namespace kaitai {
 
