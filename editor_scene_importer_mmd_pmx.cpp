@@ -325,10 +325,7 @@ String PackedSceneMMDPMX::convert_string(const std::string &s, uint8_t encoding)
 	if (encoding == 0) {
 		Vector<char16_t> buf;
 		buf.resize(s.length() / 2);
-		const char *src = s.data();
-		for (size_t i = 0; i < s.length() / 2; i++) {
-			buf.set(i, src[i * 2] | (src[i * 2 + 1] << 8));
-		}
+		memcpy(buf.ptrw(), s.c_str(), s.length());
 		output.parse_utf16(buf.ptr(), s.length() / 2);
 	} else {
 		output.parse_utf8(s.data(), s.length());
