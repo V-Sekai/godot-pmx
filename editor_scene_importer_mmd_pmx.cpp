@@ -32,6 +32,7 @@
 
 #include "thirdparty/ksy/mmd_pmx.h"
 
+#include "core/core_bind.h"
 #include "editor/import/scene_importer_mesh_node_3d.h"
 #include "scene/3d/mesh_instance_3d.h"
 #include "scene/3d/node_3d.h"
@@ -39,7 +40,6 @@
 #include "scene/animation/animation_player.h"
 #include "scene/resources/animation.h"
 #include "scene/resources/surface_tool.h"
-#include "core/core_bind.h"
 
 #include <cstdint>
 #include <fstream>
@@ -68,27 +68,27 @@ Ref<Animation> EditorSceneImporterMMDPMX::import_animation(const String &p_path,
 	return Ref<Animation>();
 }
 
-bool PackedSceneMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t* index) const {
+bool PackedSceneMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *index) const {
 	int64_t bone_index = index->value();
 	switch (index->size()) {
-	case 1: return bone_index != UINT8_MAX;
-	case 2: return bone_index != UINT16_MAX;
-	// Have to do SOMETHING even if it's not 4
-	default: return bone_index != UINT32_MAX;
+		case 1: return bone_index != UINT8_MAX;
+		case 2: return bone_index != UINT16_MAX;
+		// Have to do SOMETHING even if it's not 4
+		default: return bone_index != UINT32_MAX;
 	}
 }
 
-void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t* vertex) const {
+void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t *vertex) const {
 	Vector3 normal = Vector3(vertex->normal()->x(),
-							 vertex->normal()->y(),
-							 vertex->normal()->z());
+			vertex->normal()->y(),
+			vertex->normal()->z());
 	surface->set_normal(normal);
 	Vector2 uv = Vector2(vertex->uv()->x(),
-						 vertex->uv()->y());
+			vertex->uv()->y());
 	surface->set_uv(uv);
 	Vector3 point = Vector3(vertex->position()->x() * mmd_unit_conversion,
-							vertex->position()->y() * mmd_unit_conversion,
-							vertex->position()->z() * mmd_unit_conversion);
+			vertex->position()->y() * mmd_unit_conversion,
+			vertex->position()->z() * mmd_unit_conversion);
 	PackedInt32Array bones;
 	bones.push_back(0);
 	bones.push_back(0);
@@ -102,17 +102,14 @@ void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t
 	if (!vertex->_is_null_skin_weights()) {
 		mmd_pmx_t::bone_type_t bone_type = vertex->type();
 		switch (bone_type) {
-		case mmd_pmx_t::BONE_TYPE_BDEF1:
-			{
+			case mmd_pmx_t::BONE_TYPE_BDEF1: {
 				mmd_pmx_t::bdef1_weights_t *pmx_weights = (mmd_pmx_t::bdef1_weights_t *)vertex->skin_weights();
 				if (is_valid_index(pmx_weights->bone_index())) {
 					bones.write[0] = pmx_weights->bone_index()->value();
 					weights.write[0] = 1.0f;
 				}
-			}
-			break;
-		case mmd_pmx_t::BONE_TYPE_BDEF2:
-			{
+			} break;
+			case mmd_pmx_t::BONE_TYPE_BDEF2: {
 				mmd_pmx_t::bdef2_weights_t *pmx_weights = (mmd_pmx_t::bdef2_weights_t *)vertex->skin_weights();
 				for (int32_t count = 0; count < 2; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
@@ -120,10 +117,8 @@ void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t
 						weights.write[count] = pmx_weights->weights()->at(count);
 					}
 				}
-			}
-			break;
-		case mmd_pmx_t::BONE_TYPE_BDEF4:
-			{
+			} break;
+			case mmd_pmx_t::BONE_TYPE_BDEF4: {
 				mmd_pmx_t::bdef4_weights_t *pmx_weights = (mmd_pmx_t::bdef4_weights_t *)vertex->skin_weights();
 				for (int32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
@@ -131,13 +126,12 @@ void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t
 						weights.write[count] = pmx_weights->weights()->at(count);
 					}
 				}
-			}
-			break;
-		case mmd_pmx_t::BONE_TYPE_SDEF:
-		case mmd_pmx_t::BONE_TYPE_QDEF:
-		default:
-			break;
-			// nothing
+			} break;
+			case mmd_pmx_t::BONE_TYPE_SDEF:
+			case mmd_pmx_t::BONE_TYPE_QDEF:
+			default:
+				break;
+				// nothing
 		}
 	}
 	surface->set_bones(bones);
@@ -206,37 +200,22 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	for (int32_t bone_i = 0; bone_i < bone_count; bone_i++) {
 		Transform3D xform;
 		real_t x = bones->at(bone_i)->position()->x();
+		x *= mmd_unit_conversion;
 		real_t y = bones->at(bone_i)->position()->y();
+		y *= mmd_unit_conversion;
 		real_t z = bones->at(bone_i)->position()->z();
+		z *= mmd_unit_conversion;
 		xform.origin = Vector3(x, y, z);
 		int64_t parent_index = -1;
-		switch (bones->at(bone_i)->parent_index()->size()) {
-			case 1: {
-				parent_index = bones->at(bone_i)->parent_index()->value();
-				if (parent_index == UINT8_MAX) {
-					parent_index = -1;
-				}
-			} break;
-			case 2: {
-				parent_index = bones->at(bone_i)->parent_index()->value();
-				if (parent_index == UINT16_MAX) {
-					parent_index = -1;
-				}
-			} break;
-			case 4: {
-				parent_index = bones->at(bone_i)->parent_index()->value();
-				if (parent_index == UINT32_MAX) {
-					parent_index = -1;
-				}
-			} break;
-			default:
-				break;
-				// nothing
-		}
-		if (parent_index != -1) {
+
+		if (is_valid_index(bones->at(bone_i)->parent_index())) {
+			parent_index = bones->at(bone_i)->parent_index()->value();
 			real_t parent_x = bones->at(parent_index)->position()->x();
+			parent_x *= mmd_unit_conversion;
 			real_t parent_y = bones->at(parent_index)->position()->y();
+			parent_y *= mmd_unit_conversion;
 			real_t parent_z = bones->at(parent_index)->position()->z();
+			parent_z *= mmd_unit_conversion;
 			xform.origin -= Vector3(parent_x, parent_y, parent_z);
 		}
 		skeleton->set_bone_rest(bone_i, xform);
@@ -302,7 +281,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			Vector<String> path_components = texture_path.split("/");
 			texture_path = p_path.get_base_dir();
 			core_bind::Directory dir;
-			for (const String& elem : path_components) {
+			for (const String &elem : path_components) {
 				if (dir.open(texture_path) == OK) {
 					dir.list_dir_begin();
 					String file_name = dir.get_next();
@@ -340,8 +319,8 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	for (uint32_t rigid_bodies_i = 0; rigid_bodies_i < pmx.rigid_body_count(); rigid_bodies_i++) {
 		RigidBody3D *rigid_3d = memnew(RigidBody3D);
 		String rigid_name = pick_universal_or_common(rigid_bodies->at(rigid_bodies_i)->english_name()->value(),
-													 rigid_bodies->at(rigid_bodies_i)->name()->value(),
-													 pmx.header()->encoding());
+				rigid_bodies->at(rigid_bodies_i)->name()->value(),
+				pmx.header()->encoding());
 		rigid_3d->set_name(rigid_name);
 		root->add_child(rigid_3d);
 		rigid_3d->set_owner(root);
@@ -358,14 +337,14 @@ void PackedSceneMMDPMX::pack_mmd_pmx(String p_path, int32_t p_flags,
 	pack(root);
 }
 
-String PackedSceneMMDPMX::convert_string(const std::string& s, uint8_t encoding) const {
+String PackedSceneMMDPMX::convert_string(const std::string &s, uint8_t encoding) const {
 	String output;
 	if (encoding == 0) {
 		Vector<char16_t> buf;
 		buf.resize(s.length() / 2);
-	    const char *src = s.data();
+		const char *src = s.data();
 		for (size_t i = 0; i < s.length() / 2; i++) {
-			buf.set(i, src[i*2] | (src[i*2+1] << 8));
+			buf.set(i, src[i * 2] | (src[i * 2 + 1] << 8));
 		}
 		output.parse_utf16(buf.ptr(), s.length() / 2);
 	} else {
