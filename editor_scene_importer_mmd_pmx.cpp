@@ -171,13 +171,9 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	kaitai::kstream ks(&ifs);
 	mmd_pmx_t pmx = mmd_pmx_t(&ks);
 	Node3D *root = memnew(Node3D);
-
 	std::vector<std::unique_ptr<mmd_pmx_t::bone_t> > *bones = pmx.bones();
-
 	Skeleton3D *skeleton = memnew(Skeleton3D);
-
 	uint32_t bone_count = pmx.bone_count();
-
 	for (int32_t bone_i = 0; bone_i < bone_count; bone_i++) {
 		String output_name = pick_universal_or_common(bones->at(bone_i)->english_name()->value(), 
 			bones->at(bone_i)->name()->value(), pmx.header()->encoding());
@@ -196,20 +192,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		real_t z = bones->at(bone_i)->position()->z();
 		z *= mmd_unit_conversion;
 		xform.origin = Vector3(x, y, z);
-		int64_t parent_index = -1;
-
-		if (is_valid_index(bones->at(bone_i)->parent_index())) {
-			parent_index = bones->at(bone_i)->parent_index()->value();
-			real_t parent_x = bones->at(parent_index)->position()->x();
-			parent_x *= mmd_unit_conversion;
-			real_t parent_y = bones->at(parent_index)->position()->y();
-			parent_y *= mmd_unit_conversion;
-			real_t parent_z = bones->at(parent_index)->position()->z();
-			parent_z *= mmd_unit_conversion;
-			xform.origin -= Vector3(parent_x, parent_y, parent_z);
-		}
 		skeleton->set_bone_rest(bone_i, xform);
-		skeleton->set_bone_parent(bone_i, parent_index);
 	}
 	root->add_child(skeleton);
 	skeleton->set_owner(root);
@@ -265,7 +248,6 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			default:
 				break;
 		}
-
 		if (!texture_path.is_empty()) {
 			texture_path = texture_path.simplify_path();
 			Vector<String> path_components = texture_path.split("/");
