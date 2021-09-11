@@ -174,7 +174,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	std::vector<std::unique_ptr<mmd_pmx_t::bone_t> > *bones = pmx.bones();
 	Skeleton3D *skeleton = memnew(Skeleton3D);
 	uint32_t bone_count = pmx.bone_count();
-	for (int32_t bone_i = 0; bone_i < bone_count; bone_i++) {
+	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
 		String output_name = pick_universal_or_common(bones->at(bone_i)->english_name()->value(), 
 			bones->at(bone_i)->name()->value(), pmx.header()->encoding());
 		BoneId bone = skeleton->get_bone_count();
@@ -183,7 +183,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			skeleton->set_bone_enabled(bone, false);
 		}
 	}
-	for (int32_t bone_i = 0; bone_i < bone_count; bone_i++) {
+	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
 		Transform3D xform;
 		real_t x = bones->at(bone_i)->position()->x();
 		x *= mmd_unit_conversion;
