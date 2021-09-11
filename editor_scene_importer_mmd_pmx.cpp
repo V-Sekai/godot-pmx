@@ -198,6 +198,19 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		}
 		skeleton->set_bone_rest(bone_i, xform);
 		skeleton->set_bone_parent(bone_i, parent_index);
+	}	
+	for (int32_t bone_i = 0; bone_i < bone_count; bone_i++) {
+		Transform3D xform = skeleton->get_bone_rest(bone_i);
+		BoneId parent = skeleton->get_bone_parent(bone_i);
+		// Assume bone_i is topologically sorted
+		for (int32_t iterations = 0; iterations < bone_count; iterations++) {
+			if (parent == -1) {
+				break;
+			}
+			xform = xform * skeleton->get_bone_rest(parent).affine_inverse();
+			parent = skeleton->get_bone_parent(parent);
+		}
+		skeleton->set_bone_rest(bone_i, xform);
 	}
 	root->add_child(skeleton);
 	skeleton->set_owner(root);
