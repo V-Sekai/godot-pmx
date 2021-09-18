@@ -83,12 +83,14 @@ void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t
 			vertex->normal()->y(),
 			vertex->normal()->z());
 	surface->set_normal(normal);
+	normal.z = -normal.z;
 	Vector2 uv = Vector2(vertex->uv()->x(),
 			vertex->uv()->y());
 	surface->set_uv(uv);
 	Vector3 point = Vector3(vertex->position()->x() * mmd_unit_conversion,
 			vertex->position()->y() * mmd_unit_conversion,
 			vertex->position()->z() * mmd_unit_conversion);
+	point.z = -point.z;
 	PackedInt32Array bones;
 	bones.push_back(0);
 	bones.push_back(0);
@@ -219,6 +221,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			parent_z *= mmd_unit_conversion;
 			xform.origin -= Vector3(parent_x, parent_y, parent_z);
 		}
+		xform.origin.z = -xform.origin.z;
 		skeleton->set_bone_rest(bone_i, xform);
 		skeleton->set_bone_parent(bone_i, parent_index);
 	}
@@ -287,9 +290,9 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
 			uint32_t index = faces->at(face_i)->indices()->at(0)->value();
 			add_vertex(surface, vertices->at(index).get());
-			index = faces->at(face_i)->indices()->at(2)->value();
-			add_vertex(surface, vertices->at(index).get());
 			index = faces->at(face_i)->indices()->at(1)->value();
+			add_vertex(surface, vertices->at(index).get());
+			index = faces->at(face_i)->indices()->at(2)->value();
 			add_vertex(surface, vertices->at(index).get());
 		}
 		face_start = face_end;
