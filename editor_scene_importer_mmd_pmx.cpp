@@ -314,13 +314,13 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	}
 	std::vector<std::unique_ptr<mmd_pmx_t::rigid_body_t> > *rigid_bodies = pmx.rigid_bodies();
 	for (uint32_t rigid_bodies_i = 0; rigid_bodies_i < pmx.rigid_body_count(); rigid_bodies_i++) {
-		RigidBody3D *rigid_3d = memnew(RigidBody3D);
+		StaticBody3D *static_body_3d = memnew(StaticBody3D);
 		String rigid_name = pick_universal_or_common(rigid_bodies->at(rigid_bodies_i)->english_name()->value(),
 				rigid_bodies->at(rigid_bodies_i)->name()->value(),
 				pmx.header()->encoding());
-		rigid_3d->set_name(rigid_name);
-		root->add_child(rigid_3d);
-		rigid_3d->set_owner(root);
+		static_body_3d->set_name(rigid_name);
+		root->add_child(static_body_3d);
+		static_body_3d->set_owner(root);
 	}
 	return root;
 }
