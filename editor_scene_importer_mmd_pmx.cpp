@@ -185,7 +185,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		r_state.instantiate();
 	}
 	std::ifstream ifs(
-			ProjectSettings::get_singleton()->globalize_path(p_path).utf8().get_data(), std::ifstream::binary);
+			ProjectSettings::get_singleton()->globalize_path(p_path).get_data(), std::ifstream::binary);
 	kaitai::kstream ks(&ifs);
 	mmd_pmx_t pmx = mmd_pmx_t(&ks);
 	Node3D *root = memnew(Node3D);
@@ -269,6 +269,12 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		String texture_path;
 		int64_t texture_index = materials->at(material_cache_i)->texture_index()->value();
 		if (is_valid_index(materials->at(material_cache_i)->texture_index()) && texture_index < texture_cache.size()) {
+			if (texture_index >= texture_cache.size()) {
+				continue;
+			}
+			if (texture_cache[texture_index].is_null()) {
+				continue;
+			}
 			material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture_cache[texture_index]);
 		}
 		mmd_pmx_t::color4_t *diffuse = materials->at(material_cache_i)->diffuse();
@@ -278,7 +284,11 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		material->set_name(material_name);
 		material_cache.write[material_cache_i] = material;
 	}
+	Ref<EditorSceneImporterMesh> mesh;
+	mesh.instantiate();
+
 	uint32_t face_start = 0;
+
 	for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
 		Ref<SurfaceTool> surface;
 		surface.instantiate();
@@ -295,23 +305,71 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			index = faces->at(face_i)->indices()->at(2)->value();
 			add_vertex(surface, vertices->at(index).get());
 		}
-		face_start = face_end;
 		// Generate indices for this surface since we can't share vertices
 		surface->index();
 		Array mesh_array = surface->commit_to_arrays();
-		surface->clear();
 		Ref<Material> material = material_cache[material_i];
-		EditorSceneImporterMeshNode3D *mesh_3d = memnew(EditorSceneImporterMeshNode3D);
-		Ref<EditorSceneImporterMesh> mesh;
-		mesh.instantiate();
-		mesh_3d->set_name(material->get_name());
+		// for (uint32_t morph_i = 0; morph_i < pmx.morph_count(); morph_i++) {
+		// 	std::vector<std::unique_ptr<mmd_pmx_t::morph_t> > *morphs = pmx.morphs();
+		// 	mmd_pmx_t::morph_type_t morph_type = morphs->at(morph_i)->type();
+		// 	switch (morph_type) {
+		// 		case mmd_pmx_t::MORPH_TYPE_VERTEX: {
+		// 			String morph_name = convert_string(morphs->at(morph_i)->name()->value(), pmx.header()->encoding());
+		// 			mesh->add_blend_shape(morph_name);
+		// 		} break;
+		// 		default:
+		// 			break;
+		// 	}
+		// }
+		// Array blend_arrays;
+		// Ref<SurfaceTool> blend_surface;
+		// blend_surface.instantiate();
+		// blend_surface->create_from(mesh, material_i);
+		// for (uint32_t morph_i = 0; morph_i < pmx.morph_count(); morph_i++) {
+		// 	std::vector<std::unique_ptr<mmd_pmx_t::morph_t> > *morphs = pmx.morphs();
+		// 	String morph_name = convert_string(morphs->at(morph_i)->name()->value(), pmx.header()->encoding());
+		// 	mmd_pmx_t::morph_type_t morph_type = morphs->at(morph_i)->type();
+		// 	bool is_morph = true;
+		// 	Array array = blend_surface->commit_to_arrays();
+		// 	Vector<int32_t> array_index;
+		// 	switch (morph_type) {
+		// 		case mmd_pmx_t::MORPH_TYPE_VERTEX: {
+		// 			std::vector<std::unique_ptr<mmd_pmx_t::vertex_morph_element_t> > *vertex_morph = (std::vector<std::unique_ptr<mmd_pmx_t::vertex_morph_element_t> > *)pmx.morphs()->at(morph_i)->elements();
+		// 			for (int32_t vertex_i = 0; vertex_i < morphs->at(morph_i)->element_count(); vertex_i++) {
+		// 				uint32_t morph_index = vertex_morph->at(vertex_i)->index()->value();
+		// 				if (morph_index < face_start || morph_index >= face_end) {
+		// 					is_morph = false;
+		// 					break;
+		// 				}
+		// 				array_index.push_back(morph_index);
+		// 				Vector3 position(vertex_morph->at(vertex_i)->position()->x() * mmd_unit_conversion,
+		// 						vertex_morph->at(vertex_i)->position()->y() * mmd_unit_conversion,
+		// 						-vertex_morph->at(vertex_i)->position()->z() * mmd_unit_conversion);
+		// 				Array vertex_array = array[Mesh::ARRAY_VERTEX];
+		// 				vertex_array[morph_index] = position;
+		// 			}
+		// 		} break;
+		// 		default:
+		// 			break;
+		// 	}
+		// 	if (!is_morph) {
+		// 		continue;
+		// 	}
+		// 	blend_arrays[Mesh::ARRAY_INDEX] = array_index;
+		// 	blend_arrays.push_back(array);
+		// }
 		mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, material->get_name());
-		skeleton->add_child(mesh_3d);
-		mesh_3d->set_skin(skeleton->register_skin(nullptr)->get_skin());
-		mesh_3d->set_mesh(mesh);
-		mesh_3d->set_owner(root);
-		mesh_3d->set_skeleton_path(NodePath(".."));
+		face_start = face_end;
 	}
+	EditorSceneImporterMeshNode3D *mesh_3d = memnew(EditorSceneImporterMeshNode3D);
+	skeleton->add_child(mesh_3d);
+	mesh_3d->set_skin(skeleton->register_skin(nullptr)->get_skin());
+	mesh_3d->set_mesh(mesh);
+	mesh_3d->set_owner(root);
+	mesh_3d->set_skeleton_path(NodePath(".."));
+	String mesh_name = convert_string(pmx.header()->model_name()->value(), pmx.header()->encoding());
+	mesh_3d->set_name(mesh_name);
+
 	std::vector<std::unique_ptr<mmd_pmx_t::rigid_body_t> > *rigid_bodies = pmx.rigid_bodies();
 	for (uint32_t rigid_bodies_i = 0; rigid_bodies_i < pmx.rigid_body_count(); rigid_bodies_i++) {
 		StaticBody3D *static_body_3d = memnew(StaticBody3D);
