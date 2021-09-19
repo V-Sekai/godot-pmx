@@ -339,7 +339,6 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			Array blend_arrays;
 			for (int32_t morph_i : current_morphs) {
 				std::vector<std::unique_ptr<mmd_pmx_t::vertex_morph_element_t> > *vertex_morph = (std::vector<std::unique_ptr<mmd_pmx_t::vertex_morph_element_t> > *)pmx.morphs()->at(morph_i)->elements();
-				std::vector<std::unique_ptr<mmd_pmx_t::vertex_t> > *vertices = pmx.vertices();
 				const Vector<Vector3> position_array = mesh_array[Mesh::ARRAY_VERTEX];
 				Vector<Vector3> position_array_copy = position_array;
 				for (int32_t elem_i = 0; elem_i < pmx.morphs()->at(morph_i)->element_count(); elem_i++) {
@@ -386,6 +385,18 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		String rigid_name = pick_universal_or_common(rigid_bodies->at(rigid_bodies_i)->english_name()->value(),
 				rigid_bodies->at(rigid_bodies_i)->name()->value(),
 				pmx.header()->encoding());
+		Transform3D xform;
+		Basis basis;
+		basis.set_euler(Vector3(
+				rigid_bodies->at(rigid_bodies_i)->rotation()->x(),
+				rigid_bodies->at(rigid_bodies_i)->rotation()->y(),
+				-rigid_bodies->at(rigid_bodies_i)->rotation()->z()));
+		xform.basis = basis;
+		Vector3 point = Vector3(rigid_bodies->at(rigid_bodies_i)->position()->x() * mmd_unit_conversion,
+				rigid_bodies->at(rigid_bodies_i)->position()->y() * mmd_unit_conversion,
+				-rigid_bodies->at(rigid_bodies_i)->position()->z() * mmd_unit_conversion);
+		xform.origin = point;
+		static_body_3d->set_transform(xform);
 		static_body_3d->set_name(rigid_name);
 		root->add_child(static_body_3d);
 		static_body_3d->set_owner(root);
