@@ -193,7 +193,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	Skeleton3D *skeleton = memnew(Skeleton3D);
 	uint32_t bone_count = pmx.bone_count();
 	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		String output_name = pick_universal_or_common(bones->at(bone_i)->english_name()->value(),
+		String output_name = convert_string(
 				bones->at(bone_i)->name()->value(), pmx.header()->encoding());
 		BoneId bone = skeleton->get_bone_count();
 		skeleton->add_bone(output_name);
@@ -279,8 +279,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		}
 		mmd_pmx_t::color4_t *diffuse = materials->at(material_cache_i)->diffuse();
 		material->set_albedo(Color(diffuse->r(), diffuse->g(), diffuse->b(), diffuse->a()));
-		String material_name = pick_universal_or_common(materials->at(material_cache_i)->english_name()->value(),
-				materials->at(material_cache_i)->name()->value(), pmx.header()->encoding());
+		String material_name = convert_string(materials->at(material_cache_i)->name()->value(), pmx.header()->encoding());
 		material->set_name(material_name);
 		material_cache.write[material_cache_i] = material;
 	}
@@ -382,9 +381,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	std::vector<std::unique_ptr<mmd_pmx_t::rigid_body_t> > *rigid_bodies = pmx.rigid_bodies();
 	for (uint32_t rigid_bodies_i = 0; rigid_bodies_i < pmx.rigid_body_count(); rigid_bodies_i++) {
 		StaticBody3D *static_body_3d = memnew(StaticBody3D);
-		String rigid_name = pick_universal_or_common(rigid_bodies->at(rigid_bodies_i)->english_name()->value(),
-				rigid_bodies->at(rigid_bodies_i)->name()->value(),
-				pmx.header()->encoding());
+		String rigid_name = convert_string(rigid_bodies->at(rigid_bodies_i)->name()->value(), pmx.header()->encoding());
 		Transform3D xform;
 		Basis basis;
 		basis.set_euler(Vector3(
@@ -424,12 +421,4 @@ String PackedSceneMMDPMX::convert_string(const std::string &s, uint8_t encoding)
 		output.parse_utf8(s.data(), s.length());
 	}
 	return output;
-}
-
-String PackedSceneMMDPMX::pick_universal_or_common(std::string p_universal, std::string p_common, uint8_t encoding) {
-	if (p_common.empty()) {
-		return convert_string(p_universal, encoding);
-	} else {
-		return convert_string(p_common, encoding);
-	}
 }

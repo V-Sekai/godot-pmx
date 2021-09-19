@@ -62,7 +62,6 @@ class PackedSceneMMDPMX : public PackedScene {
 	GDCLASS(PackedSceneMMDPMX, PackedScene);
 
 	const real_t mmd_unit_conversion = 0.079f;
-	String pick_universal_or_common(std::string p_universal, std::string p_common, uint8_t encoding);
 	void add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t* vertex) const;
 	bool is_valid_index(mmd_pmx_t::sized_index_t* index) const;
 	String convert_string(const std::string& s, uint8_t encoding) const;
