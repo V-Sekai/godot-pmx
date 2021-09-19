@@ -332,7 +332,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			}
 		}
 
-		if (current_morphs.size()) {
+		if (current_morphs.size() && false) {
 			Ref<EditorSceneImporterMesh> morph_mesh;
 			morph_mesh.instantiate();
 			Array blend_arrays;
@@ -352,11 +352,10 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 				blend_shape[Mesh::ARRAY_VERTEX] = position_array_copy;
 				blend_shape[Mesh::ARRAY_INDEX] = Variant();
 				String morph_name = convert_string(pmx.morphs()->at(morph_i)->name()->value(), pmx.header()->encoding());
-				//morph_mesh->add_blend_shape(morph_name);
+				morph_mesh->add_blend_shape(morph_name);
 				blend_arrays.push_back(blend_shape);
 			}
-			// TODO Restore blend shapes 2021-09-19 fire
-			morph_mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, material->get_name());
+			morph_mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, blend_arrays, Dictionary(), material, material->get_name());
 			EditorSceneImporterMeshNode3D *mesh_3d = memnew(EditorSceneImporterMeshNode3D);
 			skeleton->add_child(mesh_3d);
 			mesh_3d->set_mesh(morph_mesh);
