@@ -293,6 +293,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		Ref<SurfaceTool> surface;
 		surface.instantiate();
 		surface->begin(Mesh::PRIMITIVE_TRIANGLES);
+		const int32_t triangle_vertices = 3;
 		std::vector<std::unique_ptr<mmd_pmx_t::vertex_t> > *vertices = pmx.vertices();
 		std::vector<std::unique_ptr<mmd_pmx_t::face_t> > *faces = pmx.faces();
 		uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
@@ -305,60 +306,69 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			index = faces->at(face_i)->indices()->at(2)->value();
 			add_vertex(surface, vertices->at(index).get());
 		}
-		// Generate indices for this surface since we can't share vertices
-		surface->index();
 		Array mesh_array = surface->commit_to_arrays();
 		Ref<Material> material = material_cache[material_i];
-		// for (uint32_t morph_i = 0; morph_i < pmx.morph_count(); morph_i++) {
-		// 	std::vector<std::unique_ptr<mmd_pmx_t::morph_t> > *morphs = pmx.morphs();
-		// 	mmd_pmx_t::morph_type_t morph_type = morphs->at(morph_i)->type();
-		// 	switch (morph_type) {
-		// 		case mmd_pmx_t::MORPH_TYPE_VERTEX: {
-		// 			String morph_name = convert_string(morphs->at(morph_i)->name()->value(), pmx.header()->encoding());
-		// 			mesh->add_blend_shape(morph_name);
-		// 		} break;
-		// 		default:
-		// 			break;
-		// 	}
-		// }
-		// Array blend_arrays;
-		// Ref<SurfaceTool> blend_surface;
-		// blend_surface.instantiate();
-		// blend_surface->create_from(mesh, material_i);
-		// for (uint32_t morph_i = 0; morph_i < pmx.morph_count(); morph_i++) {
-		// 	std::vector<std::unique_ptr<mmd_pmx_t::morph_t> > *morphs = pmx.morphs();
-		// 	String morph_name = convert_string(morphs->at(morph_i)->name()->value(), pmx.header()->encoding());
-		// 	mmd_pmx_t::morph_type_t morph_type = morphs->at(morph_i)->type();
-		// 	bool is_morph = true;
-		// 	Array array = blend_surface->commit_to_arrays();
-		// 	Vector<int32_t> array_index;
-		// 	switch (morph_type) {
-		// 		case mmd_pmx_t::MORPH_TYPE_VERTEX: {
-		// 			std::vector<std::unique_ptr<mmd_pmx_t::vertex_morph_element_t> > *vertex_morph = (std::vector<std::unique_ptr<mmd_pmx_t::vertex_morph_element_t> > *)pmx.morphs()->at(morph_i)->elements();
-		// 			for (int32_t vertex_i = 0; vertex_i < morphs->at(morph_i)->element_count(); vertex_i++) {
-		// 				uint32_t morph_index = vertex_morph->at(vertex_i)->index()->value();
-		// 				if (morph_index < face_start || morph_index >= face_end) {
-		// 					is_morph = false;
-		// 					break;
-		// 				}
-		// 				array_index.push_back(morph_index);
-		// 				Vector3 position(vertex_morph->at(vertex_i)->position()->x() * mmd_unit_conversion,
-		// 						vertex_morph->at(vertex_i)->position()->y() * mmd_unit_conversion,
-		// 						-vertex_morph->at(vertex_i)->position()->z() * mmd_unit_conversion);
-		// 				Array vertex_array = array[Mesh::ARRAY_VERTEX];
-		// 				vertex_array[morph_index] = position;
-		// 			}
-		// 		} break;
-		// 		default:
-		// 			break;
-		// 	}
-		// 	if (!is_morph) {
-		// 		continue;
-		// 	}
-		// 	blend_arrays[Mesh::ARRAY_INDEX] = array_index;
-		// 	blend_arrays.push_back(array);
-		// }
-		mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, material->get_name());
+		Vector<int32_t> current_morphs;
+		for (uint32_t morph_i = 0; morph_i < pmx.morph_count(); morph_i++) {
+			std::vector<std::unique_ptr<mmd_pmx_t::morph_t> > *morphs = pmx.morphs();
+			mmd_pmx_t::morph_type_t morph_type = morphs->at(morph_i)->type();
+			switch (morph_type) {
+				case mmd_pmx_t::MORPH_TYPE_VERTEX: {
+					std::vector<std::unique_ptr<mmd_pmx_t::vertex_morph_element_t> > *vertex_morph = (std::vector<std::unique_ptr<mmd_pmx_t::vertex_morph_element_t> > *)pmx.morphs()->at(morph_i)->elements();
+					bool is_fail = false;
+					for (int32_t vertex_i = 0; vertex_i < morphs->at(morph_i)->element_count(); vertex_i++) {
+						uint32_t morph_index = vertex_morph->at(vertex_i)->index()->value();
+						if (morph_index < face_start * triangle_vertices || morph_index >= face_end * triangle_vertices) {
+							is_fail = true;
+							break;
+						}
+					}
+					if (is_fail) {
+						break;
+					}
+					current_morphs.push_back(morph_i);
+				} break;
+				default:
+					break;
+			}
+		}
+
+		if (current_morphs.size() && false) {
+			Ref<EditorSceneImporterMesh> morph_mesh;
+			morph_mesh.instantiate();
+			Array blend_arrays;
+			for (int32_t morph_i : current_morphs) {
+				std::vector<std::unique_ptr<mmd_pmx_t::vertex_morph_element_t> > *vertex_morph = (std::vector<std::unique_ptr<mmd_pmx_t::vertex_morph_element_t> > *)pmx.morphs()->at(morph_i)->elements();
+				std::vector<std::unique_ptr<mmd_pmx_t::vertex_t> > *vertices = pmx.vertices();
+				const Vector<Vector3> position_array = mesh_array[Mesh::ARRAY_VERTEX];
+				Vector<Vector3> position_array_copy = position_array;
+				for (int32_t elem_i = 0; elem_i < pmx.morphs()->at(morph_i)->element_count(); elem_i++) {
+					uint32_t morph_index = vertex_morph->at(elem_i)->index()->value();
+					const uint32_t offset = face_start * triangle_vertices;
+					Vector3 godot_position = Vector3(vertex_morph->at(elem_i)->position()->x() * mmd_unit_conversion,
+							vertex_morph->at(elem_i)->position()->y() * mmd_unit_conversion,
+							-vertex_morph->at(elem_i)->position()->z() * mmd_unit_conversion);
+					position_array_copy.write[morph_index - offset] = godot_position;
+				}
+				Array blend_shape = mesh_array;
+				blend_shape[Mesh::ARRAY_VERTEX] = position_array_copy;
+				blend_shape[Mesh::ARRAY_INDEX] = Variant();
+				String morph_name = convert_string(pmx.morphs()->at(morph_i)->name()->value(), pmx.header()->encoding());
+				morph_mesh->add_blend_shape(morph_name);
+				blend_arrays.push_back(blend_shape);
+			}
+			morph_mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, blend_arrays, Dictionary(), material, material->get_name());
+			EditorSceneImporterMeshNode3D *mesh_3d = memnew(EditorSceneImporterMeshNode3D);
+			skeleton->add_child(mesh_3d);
+			mesh_3d->set_mesh(morph_mesh);
+			mesh_3d->set_owner(root);
+			mesh_3d->set_skin(skeleton->register_skin(nullptr)->get_skin());
+			mesh_3d->set_skeleton_path(NodePath(".."));
+			String mesh_name = convert_string(materials->at(material_i)->name()->value(), pmx.header()->encoding());
+			mesh_3d->set_name(mesh_name);
+		} else {
+			mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, material->get_name());
+		}
 		face_start = face_end;
 	}
 	EditorSceneImporterMeshNode3D *mesh_3d = memnew(EditorSceneImporterMeshNode3D);
