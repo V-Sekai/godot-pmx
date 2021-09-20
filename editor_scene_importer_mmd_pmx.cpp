@@ -287,7 +287,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 	mesh.instantiate();
 
 	uint32_t face_start = 0;
-
+	Map<uint32_t, uint32_t> original_vertex_to_new_vertex;
 	for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
 		Ref<SurfaceTool> surface;
 		surface.instantiate();
@@ -296,14 +296,20 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		std::vector<std::unique_ptr<mmd_pmx_t::vertex_t> > *vertices = pmx.vertices();
 		std::vector<std::unique_ptr<mmd_pmx_t::face_t> > *faces = pmx.faces();
 		uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
+		uint32_t new_count = 0;
 		// Add the vertices directly without indices
 		for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
 			uint32_t index = faces->at(face_i)->indices()->at(0)->value();
+			original_vertex_to_new_vertex.insert(index, new_count);
 			add_vertex(surface, vertices->at(index).get());
-			index = faces->at(face_i)->indices()->at(1)->value();
+			new_count++;
+			original_vertex_to_new_vertex.insert(index, new_count);
 			add_vertex(surface, vertices->at(index).get());
+			new_count++;
 			index = faces->at(face_i)->indices()->at(2)->value();
+			original_vertex_to_new_vertex.insert(index, new_count);
 			add_vertex(surface, vertices->at(index).get());
+			new_count++;
 		}
 		Array mesh_array = surface->commit_to_arrays();
 		Ref<Material> material = material_cache[material_i];
@@ -332,7 +338,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 			}
 		}
 
-		if (current_morphs.size() && false) {
+		if (current_morphs.size()) {
 			Ref<EditorSceneImporterMesh> morph_mesh;
 			morph_mesh.instantiate();
 			Array blend_arrays;
@@ -342,11 +348,11 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 				Vector<Vector3> position_array_copy = position_array;
 				for (int32_t elem_i = 0; elem_i < pmx.morphs()->at(morph_i)->element_count(); elem_i++) {
 					uint32_t morph_index = vertex_morph->at(elem_i)->index()->value();
-					const uint32_t offset = face_start * triangle_vertices;
 					Vector3 godot_position = Vector3(vertex_morph->at(elem_i)->position()->x() * mmd_unit_conversion,
 							vertex_morph->at(elem_i)->position()->y() * mmd_unit_conversion,
 							-vertex_morph->at(elem_i)->position()->z() * mmd_unit_conversion);
-					position_array_copy.write[morph_index - offset] = godot_position;
+					uint32_t new_index = original_vertex_to_new_vertex[morph_index];
+					position_array_copy.write[new_index] = godot_position;
 				}
 				Array blend_shape = mesh_array;
 				blend_shape[Mesh::ARRAY_VERTEX] = position_array_copy;
