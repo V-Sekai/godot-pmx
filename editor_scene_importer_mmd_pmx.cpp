@@ -185,7 +185,7 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		r_state.instantiate();
 	}
 	std::ifstream ifs(
-			ProjectSettings::get_singleton()->globalize_path(p_path).get_data(), std::ifstream::binary);
+			ProjectSettings::get_singleton()->globalize_path(p_path).utf8().get_data(), std::ifstream::binary);
 	kaitai::kstream ks(&ifs);
 	mmd_pmx_t pmx = mmd_pmx_t(&ks);
 	Node3D *root = memnew(Node3D);
