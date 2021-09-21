@@ -291,11 +291,9 @@ Node *PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags,
 		Ref<SurfaceTool> surface;
 		surface.instantiate();
 		surface->begin(Mesh::PRIMITIVE_TRIANGLES);
-		const int32_t triangle_vertices = 3;
 		std::vector<std::unique_ptr<mmd_pmx_t::vertex_t> > *vertices = pmx.vertices();
 		std::vector<std::unique_ptr<mmd_pmx_t::face_t> > *faces = pmx.faces();
 		uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
-		uint32_t new_count = 0;
 		// Add the vertices directly without indices
 		for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
 			uint32_t index = faces->at(face_i)->indices()->at(0)->value();
