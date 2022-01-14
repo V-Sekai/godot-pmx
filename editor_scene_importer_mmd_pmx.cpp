@@ -239,7 +239,8 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 		std::string raw_texture_path = pmx.textures()->at(texture_cache_i)->name()->value();
 		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
 		if (!texture_path.is_empty()) {
-			texture_path = texture_path.replace("\\", "/");
+			texture_path = texture_path.strip_escapes();
+			texture_path = texture_path.strip_edges();
 			texture_path = texture_path.simplify_path();
 			Vector<String> path_components = texture_path.split("/");
 			texture_path = p_path.get_base_dir();
