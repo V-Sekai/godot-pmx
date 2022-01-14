@@ -55,11 +55,9 @@ void EditorSceneImporterMMDPMX::get_extensions(List<String> *r_extensions) const
 }
 
 Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_flags, const Map<StringName, Variant> &p_options, int p_bake_fps, List<String> *r_missing_deps, Error *r_err) {
-	Ref<PackedSceneMMDPMX> importer;
-	importer.instantiate();
 	Ref<PMXMMDState> state;
 	state.instantiate();
-	return importer->import_scene(p_path, p_flags, p_options, p_bake_fps, r_missing_deps, r_err, state);
+	return import_scene(p_path, p_flags, p_options, p_bake_fps, r_missing_deps, r_err, state);
 }
 
 Ref<Animation> EditorSceneImporterMMDPMX::import_animation(const String &p_path,
@@ -67,7 +65,7 @@ Ref<Animation> EditorSceneImporterMMDPMX::import_animation(const String &p_path,
 	return Ref<Animation>();
 }
 
-bool PackedSceneMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *index) const {
+bool EditorSceneImporterMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *index) const {
 	int64_t bone_index = index->value();
 	switch (index->size()) {
 		case 1:
@@ -80,7 +78,7 @@ bool PackedSceneMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *index) const {
 	}
 }
 
-void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t *vertex) const {
+void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t *vertex) const {
 	Vector3 normal = Vector3(vertex->normal()->x(),
 			vertex->normal()->y(),
 			vertex->normal()->z());
@@ -166,43 +164,27 @@ void PackedSceneMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t
 	}
 }
 
-void PackedSceneMMDPMX::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("pack_mmd_pmx", "path", "flags", "bake_fps", "state"),
-			&PackedSceneMMDPMX::pack_mmd_pmx, DEFVAL(0), DEFVAL(1000.0f), DEFVAL(Ref<PMXMMDState>()));
-	ClassDB::bind_method(D_METHOD("import_mmd_pmx_scene", "path", "flags", "bake_fps", "state"),
-			&PackedSceneMMDPMX::import_mmd_pmx_scene, DEFVAL(0), DEFVAL(1000.0f), DEFVAL(Ref<PMXMMDState>()));
-}
-
-Node *PackedSceneMMDPMX::import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state) {
+Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state) {
 	Error err = FAILED;
 	List<String> deps;
 	Map<StringName, Variant> options;
 	return import_scene(p_path, p_flags, options, p_bake_fps, &deps, &err, r_state);
 }
 
-String PackedSceneMMDPMX::convert_string(const std::string &s, uint8_t encoding) const {
+String EditorSceneImporterMMDPMX::convert_string(const std::string &s, uint8_t encoding) const {
 	String output;
 	if (encoding == 0) {
 		Vector<char16_t> buf;
 		buf.resize(s.length() / 2);
 		memcpy(buf.ptrw(), s.c_str(), s.length());
-		output.parse_utf16(buf.ptr(), s.length() / 2);
+		output.parse_utf16(buf.ptr(), s.length());
 	} else {
 		output.parse_utf8(s.data(), s.length());
 	}
 	return output;
 }
-void PackedSceneMMDPMX::PackedSceneMMDPMX::pack_mmd_pmx(String p_path, int32_t p_flags,
-		real_t p_bake_fps, Ref<PMXMMDState> r_state) {
-	Error err = FAILED;
-	List<String> deps;
-	Map<StringName, Variant> options;
-	Node *root = import_scene(p_path, p_flags, options, p_bake_fps, &deps, &err, r_state);
-	ERR_FAIL_COND(err != OK);
-	pack(root);
-}
 
-Node *PackedSceneMMDPMX::PackedSceneMMDPMX::import_scene(const String &p_path, uint32_t p_flags, const Map<StringName, Variant> &p_options, int p_bake_fps, List<String> *r_missing_deps, Error *r_err, Ref<PMXMMDState> r_state) {
+Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_flags, const Map<StringName, Variant> &p_options, int p_bake_fps, List<String> *r_missing_deps, Error *r_err, Ref<PMXMMDState> r_state) {
 	if (r_state == Ref<PMXMMDState>()) {
 		r_state.instantiate();
 	}
@@ -257,6 +239,7 @@ Node *PackedSceneMMDPMX::PackedSceneMMDPMX::import_scene(const String &p_path, u
 		std::string raw_texture_path = pmx.textures()->at(texture_cache_i)->name()->value();
 		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
 		if (!texture_path.is_empty()) {
+			texture_path = texture_path.replace("\\", "/");
 			texture_path = texture_path.simplify_path();
 			Vector<String> path_components = texture_path.split("/");
 			texture_path = p_path.get_base_dir();
@@ -273,7 +256,7 @@ Node *PackedSceneMMDPMX::PackedSceneMMDPMX::import_scene(const String &p_path, u
 						file_name = dir.get_next();
 					}
 					if (file_name.is_empty()) {
-						print_line(vformat("Couldn't find texture path %s", texture_path));
+						print_line(vformat("Couldn't find texture path %s.", texture_path));
 						break;
 					}
 				}
@@ -291,10 +274,7 @@ Node *PackedSceneMMDPMX::PackedSceneMMDPMX::import_scene(const String &p_path, u
 		material.instantiate();
 		String texture_path;
 		int64_t texture_index = materials->at(material_cache_i)->texture_index()->value();
-		if (is_valid_index(materials->at(material_cache_i)->texture_index()) && texture_index < texture_cache.size()) {
-			if (texture_index >= texture_cache.size()) {
-				continue;
-			}
+		if (!is_valid_index(materials->at(material_cache_i)->texture_index())) {
 			if (texture_cache[texture_index].is_null()) {
 				continue;
 			}

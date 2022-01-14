@@ -24,7 +24,6 @@ void register_pmx_types() {
 	EditorNode::add_init_callback(_editor_init);
 #endif
 	GDREGISTER_CLASS(PMXMMDState);
-	GDREGISTER_CLASS(PackedSceneMMDPMX);
 #endif
 }
 
