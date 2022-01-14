@@ -245,6 +245,7 @@ Node *PackedSceneMMDPMX::PackedSceneMMDPMX::import_scene(const String &p_path, u
 		}
 		xform.origin.z = -xform.origin.z;
 		skeleton->set_bone_rest(bone_i, xform);
+		skeleton->set_bone_pose_position(bone_i, xform.origin);
 		skeleton->set_bone_parent(bone_i, parent_index);
 	}
 	root->add_child(skeleton);
@@ -327,12 +328,16 @@ Node *PackedSceneMMDPMX::PackedSceneMMDPMX::import_scene(const String &p_path, u
 		}
 		Array mesh_array = surface->commit_to_arrays();
 		Ref<Material> material = material_cache[material_i];
-		mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, material->get_name());
+		String name;
+		if (material.is_valid()) {
+			name = material->get_name();
+		}
+		mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, name);
 		face_start = face_end;
 	}
 	ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
 	skeleton->add_child(mesh_3d);
-	mesh_3d->set_skin(skeleton->register_skin(nullptr)->get_skin());
+	mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
 	mesh_3d->set_mesh(mesh);
 	mesh_3d->set_owner(root);
 	mesh_3d->set_skeleton_path(NodePath(".."));
