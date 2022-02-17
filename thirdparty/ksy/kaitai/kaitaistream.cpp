@@ -678,7 +678,23 @@ std::string kaitai::kstream::bytes_to_str(std::string src, std::string src_enc) 
 }
 #elif defined(KS_STR_ENCODING_NONE)
 std::string kaitai::kstream::bytes_to_str(std::string src, std::string src_enc) {
-    return src;
+	return src;
+}
+#elif defined(KS_STR_ENCODING_ICU)
+#include <unicode/unistr.h>
+#include <iostream>
+#include <string>
+#include <vector>
+
+// https://gist.github.com/kilfu0701/e279e35372066ae1832850c438d5611e
+std::string kaitai::kstream::bytes_to_str(std::string src, std::string src_enc) {
+	icu::UnicodeString src(value.c_str(), src_enc);
+	int length = src.extract(0, src.length(), NULL, "utf8");
+
+	std::vector<char> result(length + 1);
+	src.extract(0, src.length(), &result[0], "utf8");
+
+	return std::string(result.begin(), result.end() - 1);
 }
 #else
 #error Need to decide how to handle strings: please define one of: KS_STR_ENCODING_ICONV, KS_STR_ENCODING_NONE

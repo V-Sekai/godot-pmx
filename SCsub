@@ -5,7 +5,7 @@ env_mmd = env_modules.Clone()
 #env_mmd.Prepend(CPPPATH=['thirdparty/kaitai_struct_cpp_stl_runtime/'])
 env_mmd.Prepend(CPPPATH=['thirdparty/ksy/'])
 env_mmd.Prepend(CPPPATH=['.'])
-env_mmd.Append(CPPDEFINES=['KS_STR_ENCODING_NONE'])
+env_mmd.Append(CPPDEFINES=['KS_STR_ENCODING_ICU'])
 
 env_thirdparty = env_mmd.Clone()
 env_thirdparty.disable_warnings()
