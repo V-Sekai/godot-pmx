@@ -30,8 +30,7 @@
 
 #include "editor_scene_importer_mmd_pmx.h"
 
-#include "thirdparty/ksy/mmd_pmx.h"
-
+#include "core/config/project_settings.h"
 #include "core/core_bind.h"
 #include "scene/3d/importer_mesh_instance_3d.h"
 #include "scene/3d/mesh_instance_3d.h"
@@ -45,6 +44,8 @@
 #include <cstdint>
 #include <fstream>
 #include <string>
+
+#include "thirdparty/ksy/mmd_pmx.h"
 
 uint32_t EditorSceneImporterMMDPMX::get_import_flags() const {
 	return IMPORT_SCENE;
