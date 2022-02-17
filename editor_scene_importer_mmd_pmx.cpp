@@ -231,7 +231,7 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 		skeleton->set_bone_pose_position(bone_i, xform.origin);
 		skeleton->set_bone_parent(bone_i, parent_index);
 	}
-	root->add_child(skeleton);
+	root->add_child(skeleton, true);
 	skeleton->set_owner(root);
 	std::vector<std::unique_ptr<mmd_pmx_t::material_t>> *materials = pmx.materials();
 	Vector<Ref<Texture2D>> texture_cache;
@@ -321,7 +321,7 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 		face_start = face_end;
 	}
 	ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
-	skeleton->add_child(mesh_3d);
+	skeleton->add_child(mesh_3d, true);
 	mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
 	mesh_3d->set_mesh(mesh);
 	mesh_3d->set_owner(root);
@@ -346,7 +346,7 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 		xform.origin = point;
 		static_body_3d->set_transform(xform);
 		static_body_3d->set_name(rigid_name);
-		root->add_child(static_body_3d);
+		root->add_child(static_body_3d, true);
 		static_body_3d->set_owner(root);
 	}
 	return root;
