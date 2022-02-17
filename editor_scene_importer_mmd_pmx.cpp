@@ -277,6 +277,9 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 		String texture_path;
 		int64_t texture_index = materials->at(material_cache_i)->texture_index()->value();
 		if (!is_valid_index(materials->at(material_cache_i)->texture_index())) {
+			if (texture_index >= texture_cache.size()) {
+				continue;
+			}
 			if (texture_cache[texture_index].is_null()) {
 				continue;
 			}
