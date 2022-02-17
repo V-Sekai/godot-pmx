@@ -1,5 +1,5 @@
 def can_build(env, platform):
-    return env["tools"]
+    env["tools"] and env["platform"] == "windows"
 
 def configure(env):
     pass
