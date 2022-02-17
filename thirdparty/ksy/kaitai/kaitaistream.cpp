@@ -37,7 +37,6 @@ kaitai::kstream::kstream(const std::string& data): m_io_str(data) {
 }
 
 void kaitai::kstream::init() {
-    exceptions_enable();
     align_to_byte();
 }
 
@@ -680,21 +679,13 @@ std::string kaitai::kstream::bytes_to_str(std::string src, std::string src_enc) 
 std::string kaitai::kstream::bytes_to_str(std::string src, std::string src_enc) {
 	return src;
 }
-#elif defined(KS_STR_ENCODING_ICU)
-#include <unicode/unistr.h>
-#include <iostream>
-#include <string>
-#include <vector>
-
-// https://gist.github.com/kilfu0701/e279e35372066ae1832850c438d5611e
-std::string kaitai::kstream::bytes_to_str(std::string src, std::string src_enc) {
-	icu::UnicodeString src(value.c_str(), src_enc);
-	int length = src.extract(0, src.length(), NULL, "utf8");
-
-	std::vector<char> result(length + 1);
-	src.extract(0, src.length(), &result[0], "utf8");
-
-	return std::string(result.begin(), result.end() - 1);
+#elif defined(KS_STR_ENCODING_SHIFT_JIS)
+#include "thirdparty/shift_jis.h"
+std::string kaitai::kstream::bytes_to_str(std::string p_src, std::string p_src_enc) {
+    if (p_src_enc == "shift_jis" || p_src_enc == "Shift-JIS") {
+        return sj2utf8(p_src);
+    }
+    return p_src;
 }
 #else
 #error Need to decide how to handle strings: please define one of: KS_STR_ENCODING_ICONV, KS_STR_ENCODING_NONE
