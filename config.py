@@ -1,5 +1,5 @@
 def can_build(env, platform):
-    env["tools"]
+    return env["tools"]
 
 def configure(env):
     pass
