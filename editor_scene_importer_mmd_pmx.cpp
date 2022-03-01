@@ -243,26 +243,11 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 			texture_path = texture_path.strip_escapes();
 			texture_path = texture_path.strip_edges();
 			texture_path = texture_path.simplify_path();
-			Vector<String> path_components = texture_path.split("/");
-			texture_path = p_path.get_base_dir();
-			core_bind::Directory dir;
-			for (const String &elem : path_components) {
-				if (dir.open(texture_path) == OK) {
-					dir.list_dir_begin();
-					String file_name = dir.get_next();
-					while (!file_name.is_empty()) {
-						if (elem.nocasecmp_to(file_name) == 0) {
-							texture_path = texture_path.plus_file(file_name);
-							break;
-						}
-						file_name = dir.get_next();
-					}
-					if (file_name.is_empty()) {
-						print_line(vformat("Couldn't find texture path %s.", texture_path));
-						break;
-					}
-				}
-			}
+			texture_path = p_path.get_base_dir() + "/" + texture_path;
+			String ext;
+			ext.parse_utf8(texture_path.get_extension().ascii().get_data());
+			ext = ext.strip_edges();
+			texture_path = texture_path.get_basename() + "." + ext;
 			print_verbose(vformat("Found texture %s", texture_path));
 			Ref<Texture> base_color_tex = ResourceLoader::load(texture_path);
 			texture_cache.write[texture_cache_i] = base_color_tex;
@@ -276,7 +261,7 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 		material.instantiate();
 		String texture_path;
 		int64_t texture_index = materials->at(material_cache_i)->texture_index()->value();
-		if (!is_valid_index(materials->at(material_cache_i)->texture_index())) {
+		if (is_valid_index(materials->at(material_cache_i)->texture_index())) {
 			if (texture_index >= texture_cache.size()) {
 				continue;
 			}
