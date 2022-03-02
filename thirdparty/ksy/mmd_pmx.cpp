@@ -914,7 +914,7 @@ mmd_pmx_t::header_t::header_t(kaitai::kstream* p__io, mmd_pmx_t* p__parent, mmd_
 void mmd_pmx_t::header_t::_read() {
     m_magic = m__io->read_bytes(4);
     if (!(magic() == std::string("\x50\x4D\x58\x20", 4))) {
-        throw kaitai::validation_not_equal_error<std::string>(std::string("\x50\x4D\x58\x20", 4), magic(), _io(), std::string("/types/header/seq/0"));
+        return;
     }
     m_version = m__io->read_f4le();
     m_header_size = m__io->read_u1();
