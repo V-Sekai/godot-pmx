@@ -235,16 +235,20 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 	texture_cache.resize(pmx.texture_count());
 	for (uint32_t texture_cache_i = 0; texture_cache_i < pmx.texture_count(); texture_cache_i++) {
 		std::string raw_texture_path = pmx.textures()->at(texture_cache_i)->name()->value();
-		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
-		if (!texture_path.is_empty()) {
-			texture_path = texture_path.strip_escapes();
-			texture_path = texture_path.strip_edges();
-			texture_path = texture_path.simplify_path();
-			texture_path = p_path.get_base_dir() + "/" + texture_path;
-			print_verbose(vformat("Found texture %s", texture_path));
-			Ref<Texture> base_color_tex = ResourceLoader::load(texture_path);
-			texture_cache.write[texture_cache_i] = base_color_tex;
+		if (raw_texture_path.empty()) {
+			continue;
 		}
+		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
+		if (texture_path.is_empty()) {
+			continue;
+		}
+		texture_path = texture_path.strip_escapes();
+		texture_path = texture_path.strip_edges();
+		texture_path = texture_path.simplify_path();
+		texture_path = p_path.get_base_dir() + "/" + texture_path;
+		print_verbose(vformat("Found texture %s", texture_path));
+		Ref<Texture> base_color_tex = ResourceLoader::load(texture_path);
+		texture_cache.write[texture_cache_i] = base_color_tex;
 	}
 
 	Vector<Ref<StandardMaterial3D>> material_cache;
