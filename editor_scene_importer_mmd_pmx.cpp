@@ -175,7 +175,10 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 String EditorSceneImporterMMDPMX::convert_string(const std::string &s, uint8_t encoding) const {
 	String output;
 	if (encoding == 0) {
-		output.parse_utf16((const char16_t *)s.c_str(), s.size() / 2);
+		Vector<char16_t> buf;
+		buf.resize(s.length() / 2);
+		memcpy(buf.ptrw(), s.c_str(), s.length());
+		output.parse_utf16(buf.ptr(), buf.size());
 	} else {
 		output.parse_utf8(s.data(), s.length());
 	}
