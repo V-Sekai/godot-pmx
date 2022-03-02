@@ -269,8 +269,6 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 		material->set_name(material_name);
 		material_cache.write[material_cache_i] = material;
 	}
-	Ref<ImporterMesh> mesh;
-	mesh.instantiate();
 
 	uint32_t face_start = 0;
 	for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
@@ -295,17 +293,18 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 		if (material.is_valid()) {
 			name = material->get_name();
 		}
+		Ref<ImporterMesh> mesh;
+		mesh.instantiate();
 		mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, name);
 		face_start = face_end;
+		ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
+		skeleton->add_child(mesh_3d, true);
+		mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
+		mesh_3d->set_mesh(mesh);
+		mesh_3d->set_owner(root);
+		mesh_3d->set_skeleton_path(NodePath(".."));
+		mesh_3d->set_name(name);
 	}
-	ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
-	skeleton->add_child(mesh_3d, true);
-	mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
-	mesh_3d->set_mesh(mesh);
-	mesh_3d->set_owner(root);
-	mesh_3d->set_skeleton_path(NodePath(".."));
-	String mesh_name = convert_string(pmx.header()->model_name()->value(), pmx.header()->encoding());
-	mesh_3d->set_name(mesh_name);
 
 	std::vector<std::unique_ptr<mmd_pmx_t::rigid_body_t>> *rigid_bodies = pmx.rigid_bodies();
 	for (uint32_t rigid_bodies_i = 0; rigid_bodies_i < pmx.rigid_body_count(); rigid_bodies_i++) {
