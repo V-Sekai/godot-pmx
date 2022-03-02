@@ -175,10 +175,7 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 String EditorSceneImporterMMDPMX::convert_string(const std::string &s, uint8_t encoding) const {
 	String output;
 	if (encoding == 0) {
-		Vector<char16_t> buf;
-		buf.resize(s.length() / 2);
-		memcpy(buf.ptrw(), s.c_str(), s.length());
-		output.parse_utf16(buf.ptr(), s.length());
+		output.parse_utf16((const char16_t *)s.c_str(), s.size() / 2);
 	} else {
 		output.parse_utf8(s.data(), s.length());
 	}
@@ -244,10 +241,6 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 			texture_path = texture_path.strip_edges();
 			texture_path = texture_path.simplify_path();
 			texture_path = p_path.get_base_dir() + "/" + texture_path;
-			String ext;
-			ext.parse_utf8(texture_path.get_extension().ascii().get_data());
-			ext = ext.strip_edges();
-			texture_path = texture_path.get_basename() + "." + ext;
 			print_verbose(vformat("Found texture %s", texture_path));
 			Ref<Texture> base_color_tex = ResourceLoader::load(texture_path);
 			texture_cache.write[texture_cache_i] = base_color_tex;
