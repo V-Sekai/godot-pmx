@@ -48,18 +48,16 @@ class EditorSceneImporterMMDPMX : public EditorSceneFormatImporter {
 	void add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t *vertex) const;
 	bool is_valid_index(mmd_pmx_t::sized_index_t *index) const;
 	String convert_string(const std::string &s, uint8_t encoding) const;
-	virtual Node *import_scene(const String &p_path, uint32_t p_flags, const Map<StringName, Variant> &p_options, int p_bake_fps, List<String> *r_missing_deps, Error *r_err, Ref<PMXMMDState> r_state);
+	virtual Node *import_scene(const String &p_path, uint32_t p_flags, const HashMap<StringName, Variant> &p_options, int p_bake_fps, List<String> *r_missing_deps, Error *r_err, Ref<PMXMMDState> r_state);
 	virtual Node *import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state = Ref<PMXMMDState>());
 
 public:
 	virtual uint32_t get_import_flags() const override;
 	virtual void get_extensions(List<String> *r_extensions) const override;
-	virtual Node *import_scene(const String &p_path, uint32_t p_flags, const Map<StringName, Variant> &p_options,
+	virtual Node *import_scene(const String &p_path, uint32_t p_flags, const HashMap<StringName, Variant> &p_options,
 			int p_bake_fps,
 			List<String> *r_missing_deps = nullptr,
 			Error *r_err = nullptr) override;
-	virtual Ref<Animation> import_animation(const String &p_path,
-			uint32_t p_flags, const Map<StringName, Variant> &p_options, int p_bake_fps) override;
 };
 
 class PMXMMDState : public Resource {

@@ -1,2 +1,7 @@
-void register_pmx_types();
-void unregister_pmx_types();
+
+#pragma once
+
+#include "modules/register_module_types.h"
+
+void initialize_pmx_module(ModuleInitializationLevel p_level);
+void uninitialize_pmx_module(ModuleInitializationLevel p_level);

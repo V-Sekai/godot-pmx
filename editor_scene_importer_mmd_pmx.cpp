@@ -55,15 +55,10 @@ void EditorSceneImporterMMDPMX::get_extensions(List<String> *r_extensions) const
 	r_extensions->push_back("pmx");
 }
 
-Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_flags, const Map<StringName, Variant> &p_options, int p_bake_fps, List<String> *r_missing_deps, Error *r_err) {
+Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_flags, const HashMap<StringName, Variant> &p_options, int p_bake_fps, List<String> *r_missing_deps, Error *r_err) {
 	Ref<PMXMMDState> state;
 	state.instantiate();
 	return import_scene(p_path, p_flags, p_options, p_bake_fps, r_missing_deps, r_err, state);
-}
-
-Ref<Animation> EditorSceneImporterMMDPMX::import_animation(const String &p_path,
-		uint32_t p_flags, const Map<StringName, Variant> &p_options, int p_bake_fps) {
-	return Ref<Animation>();
 }
 
 bool EditorSceneImporterMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *index) const {
@@ -168,7 +163,7 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::
 Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state) {
 	Error err = FAILED;
 	List<String> deps;
-	Map<StringName, Variant> options;
+	HashMap<StringName, Variant> options;
 	return import_scene(p_path, p_flags, options, p_bake_fps, &deps, &err, r_state);
 }
 
@@ -185,7 +180,7 @@ String EditorSceneImporterMMDPMX::convert_string(const std::string &s, uint8_t e
 	return output;
 }
 
-Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_flags, const Map<StringName, Variant> &p_options, int p_bake_fps, List<String> *r_missing_deps, Error *r_err, Ref<PMXMMDState> r_state) {
+Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_flags, const HashMap<StringName, Variant> &p_options, int p_bake_fps, List<String> *r_missing_deps, Error *r_err, Ref<PMXMMDState> r_state) {
 	if (r_state == Ref<PMXMMDState>()) {
 		r_state.instantiate();
 	}

@@ -1,7 +1,9 @@
+
 #include "register_types.h"
+
 #include "core/object/class_db.h"
 #include "editor/editor_node.h"
-
+#include "editor/import/resource_importer_scene.h"
 #include "editor_scene_importer_mmd_pmx.h"
 
 #ifndef _3D_DISABLED
@@ -9,12 +11,15 @@
 static void _editor_init() {
 	Ref<EditorSceneImporterMMDPMX> import_pmx;
 	import_pmx.instantiate();
-	ResourceImporterScene::get_singleton()->add_importer(import_pmx);
+	ResourceImporterScene::add_importer(import_pmx);
 }
 #endif
 #endif
 
-void register_pmx_types() {
+void initialize_pmx_module(ModuleInitializationLevel p_level) {
+	if (p_level != MODULE_INITIALIZATION_LEVEL_EDITOR) {
+		return;
+	}
 #ifndef _3D_DISABLED
 #ifdef TOOLS_ENABLED
 	ClassDB::APIType prev_api = ClassDB::get_current_api();
@@ -27,5 +32,5 @@ void register_pmx_types() {
 #endif
 }
 
-void unregister_pmx_types() {
+void uninitialize_pmx_module(ModuleInitializationLevel p_level) {
 }
