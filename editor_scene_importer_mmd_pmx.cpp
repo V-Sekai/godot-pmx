@@ -65,12 +65,12 @@ bool EditorSceneImporterMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *index) 
 	int64_t bone_index = index->value();
 	switch (index->size()) {
 		case 1:
-			return bone_index != UINT8_MAX;
+			return bone_index < UINT8_MAX;
 		case 2:
-			return bone_index != UINT16_MAX;
+			return bone_index < UINT16_MAX;
 		// Have to do SOMETHING even if it's not 4
 		default:
-			return bone_index != UINT32_MAX;
+			return bone_index < UINT32_MAX;
 	}
 }
 
@@ -278,14 +278,44 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 		surface.instantiate();
 		surface->begin(Mesh::PRIMITIVE_TRIANGLES);
 		std::vector<std::unique_ptr<mmd_pmx_t::vertex_t>> *vertices = pmx.vertices();
+		if (!vertices->size()) {
+			continue;
+		}
 		std::vector<std::unique_ptr<mmd_pmx_t::face_t>> *faces = pmx.faces();
+		if (!faces) {
+			continue;
+		}
+		if (!faces->size()) {
+			continue;
+		}
 		uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
 		// Add the vertices directly without indices
 		for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
+			if (face_i >= faces->size()) {
+				continue;
+			}
+			if (!faces->at(face_i).get()) {
+				continue;
+			}
+			if (!faces->at(face_i)->indices()->at(0).get()) {
+				continue;
+			}
+			if (!is_valid_index(faces->at(face_i)->indices()->at(0).get())) {
+				continue;
+			}
 			uint32_t index = faces->at(face_i)->indices()->at(0)->value();
+			if(index >= vertices->size()) {
+				continue;
+			}
 			add_vertex(surface, vertices->at(index).get());
+			if (!is_valid_index(faces->at(face_i)->indices()->at(1).get())) {
+				continue;
+			}
 			index = faces->at(face_i)->indices()->at(1)->value();
 			add_vertex(surface, vertices->at(index).get());
+			if (!is_valid_index(faces->at(face_i)->indices()->at(2).get())) {
+				continue;
+			}
 			index = faces->at(face_i)->indices()->at(2)->value();
 			add_vertex(surface, vertices->at(index).get());
 		}
