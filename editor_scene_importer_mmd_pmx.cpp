@@ -62,6 +62,7 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 }
 
 bool EditorSceneImporterMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *index) const {
+	ERR_FAIL_NULL_V(index, false);
 	int64_t bone_index = index->value();
 	switch (index->size()) {
 		case 1:
@@ -75,14 +76,19 @@ bool EditorSceneImporterMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *index) 
 }
 
 void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t *vertex) const {
+	ERR_FAIL_NULL(surface);
+	ERR_FAIL_NULL(vertex);
+	ERR_FAIL_NULL(vertex->normal());
 	Vector3 normal = Vector3(vertex->normal()->x(),
 			vertex->normal()->y(),
 			vertex->normal()->z());
 	surface->set_normal(normal);
 	normal.z = -normal.z;
+	ERR_FAIL_NULL(vertex->uv());
 	Vector2 uv = Vector2(vertex->uv()->x(),
 			vertex->uv()->y());
 	surface->set_uv(uv);
+	ERR_FAIL_NULL(vertex->position());
 	Vector3 point = Vector3(vertex->position()->x() * mmd_unit_conversion,
 			vertex->position()->y() * mmd_unit_conversion,
 			vertex->position()->z() * mmd_unit_conversion);
@@ -102,6 +108,7 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::
 		switch (bone_type) {
 			case mmd_pmx_t::BONE_TYPE_BDEF1: {
 				mmd_pmx_t::bdef1_weights_t *pmx_weights = (mmd_pmx_t::bdef1_weights_t *)vertex->skin_weights();
+				ERR_FAIL_NULL(pmx_weights);
 				if (is_valid_index(pmx_weights->bone_index())) {
 					bones.write[0] = pmx_weights->bone_index()->value();
 					weights.write[0] = 1.0f;
@@ -109,6 +116,7 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::
 			} break;
 			case mmd_pmx_t::BONE_TYPE_BDEF2: {
 				mmd_pmx_t::bdef2_weights_t *pmx_weights = (mmd_pmx_t::bdef2_weights_t *)vertex->skin_weights();
+				ERR_FAIL_NULL(pmx_weights);
 				for (uint32_t count = 0; count < 2; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
 						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
@@ -118,6 +126,7 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::
 			} break;
 			case mmd_pmx_t::BONE_TYPE_BDEF4: {
 				mmd_pmx_t::bdef4_weights_t *pmx_weights = (mmd_pmx_t::bdef4_weights_t *)vertex->skin_weights();
+				ERR_FAIL_NULL(pmx_weights);
 				for (uint32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
 						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
@@ -128,6 +137,7 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::
 			case mmd_pmx_t::BONE_TYPE_SDEF: {
 				// TODO implement 2021-09-10 fire
 				mmd_pmx_t::sdef_weights_t *pmx_weights = (mmd_pmx_t::sdef_weights_t *)vertex->skin_weights();
+				ERR_FAIL_NULL(pmx_weights);
 				for (uint32_t count = 0; count < 2; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
 						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
@@ -139,10 +149,16 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::
 			default: {
 				// TODO implement 2021-09-10 fire
 				mmd_pmx_t::qdef_weights_t *pmx_weights = (mmd_pmx_t::qdef_weights_t *)vertex->skin_weights();
+				ERR_FAIL_NULL(pmx_weights);
+				ERR_FAIL_NULL(pmx_weights->bone_indices());
+				ERR_FAIL_NULL(pmx_weights->weights());
 				for (uint32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
+						ERR_FAIL_NULL(pmx_weights->bone_indices()->at(count).get());
 						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
-						weights.write[count] = pmx_weights->weights()->at(count);
+						std::vector<float> *weight = pmx_weights->weights();
+						ERR_FAIL_NULL(weight);
+						weights.write[count] = weight->at(count);
 					}
 				}
 			} break;
@@ -161,6 +177,7 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::
 }
 
 Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state) {
+	ERR_FAIL_NULL_V(r_state, nullptr);
 	Error err = FAILED;
 	List<String> deps;
 	HashMap<StringName, Variant> options;
