@@ -63,7 +63,7 @@ Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_f
 
 bool EditorSceneImporterMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *index) const {
 	ERR_FAIL_NULL_V(index, false);
-	int64_t bone_index = index->value();
+	const int64_t bone_index = index->value();
 	switch (index->size()) {
 		case 1:
 			return bone_index < UINT8_MAX;
@@ -75,112 +75,11 @@ bool EditorSceneImporterMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *index) 
 	}
 }
 
-void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> surface, mmd_pmx_t::vertex_t *vertex) const {
-	ERR_FAIL_NULL(surface);
-	ERR_FAIL_NULL(vertex);
-	ERR_FAIL_NULL(vertex->normal());
-	Vector3 normal = Vector3(vertex->normal()->x(),
-			vertex->normal()->y(),
-			vertex->normal()->z());
-	surface->set_normal(normal);
-	normal.z = -normal.z;
-	ERR_FAIL_NULL(vertex->uv());
-	Vector2 uv = Vector2(vertex->uv()->x(),
-			vertex->uv()->y());
-	surface->set_uv(uv);
-	ERR_FAIL_NULL(vertex->position());
-	Vector3 point = Vector3(vertex->position()->x() * mmd_unit_conversion,
-			vertex->position()->y() * mmd_unit_conversion,
-			vertex->position()->z() * mmd_unit_conversion);
-	point.z = -point.z;
-	PackedInt32Array bones;
-	bones.push_back(0);
-	bones.push_back(0);
-	bones.push_back(0);
-	bones.push_back(0);
-	PackedFloat32Array weights;
-	weights.push_back(0.0f);
-	weights.push_back(0.0f);
-	weights.push_back(0.0f);
-	weights.push_back(0.0f);
-	if (!vertex->_is_null_skin_weights()) {
-		mmd_pmx_t::bone_type_t bone_type = vertex->type();
-		switch (bone_type) {
-			case mmd_pmx_t::BONE_TYPE_BDEF1: {
-				mmd_pmx_t::bdef1_weights_t *pmx_weights = (mmd_pmx_t::bdef1_weights_t *)vertex->skin_weights();
-				ERR_FAIL_NULL(pmx_weights);
-				if (is_valid_index(pmx_weights->bone_index())) {
-					bones.write[0] = pmx_weights->bone_index()->value();
-					weights.write[0] = 1.0f;
-				}
-			} break;
-			case mmd_pmx_t::BONE_TYPE_BDEF2: {
-				mmd_pmx_t::bdef2_weights_t *pmx_weights = (mmd_pmx_t::bdef2_weights_t *)vertex->skin_weights();
-				ERR_FAIL_NULL(pmx_weights);
-				for (uint32_t count = 0; count < 2; count++) {
-					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
-						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
-						weights.write[count] = pmx_weights->weights()->at(count);
-					}
-				}
-			} break;
-			case mmd_pmx_t::BONE_TYPE_BDEF4: {
-				mmd_pmx_t::bdef4_weights_t *pmx_weights = (mmd_pmx_t::bdef4_weights_t *)vertex->skin_weights();
-				ERR_FAIL_NULL(pmx_weights);
-				for (uint32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
-					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
-						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
-						weights.write[count] = pmx_weights->weights()->at(count);
-					}
-				}
-			} break;
-			case mmd_pmx_t::BONE_TYPE_SDEF: {
-				// TODO implement 2021-09-10 fire
-				mmd_pmx_t::sdef_weights_t *pmx_weights = (mmd_pmx_t::sdef_weights_t *)vertex->skin_weights();
-				ERR_FAIL_NULL(pmx_weights);
-				for (uint32_t count = 0; count < 2; count++) {
-					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
-						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
-						weights.write[count] = pmx_weights->weights()->at(count);
-					}
-				}
-			} break;
-			case mmd_pmx_t::BONE_TYPE_QDEF:
-			default: {
-				// TODO implement 2021-09-10 fire
-				mmd_pmx_t::qdef_weights_t *pmx_weights = (mmd_pmx_t::qdef_weights_t *)vertex->skin_weights();
-				ERR_FAIL_NULL(pmx_weights);
-				ERR_FAIL_NULL(pmx_weights->bone_indices());
-				ERR_FAIL_NULL(pmx_weights->weights());
-				for (uint32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
-					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
-						ERR_FAIL_NULL(pmx_weights->bone_indices()->at(count).get());
-						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
-						std::vector<float> *weight = pmx_weights->weights();
-						ERR_FAIL_NULL(weight);
-						weights.write[count] = weight->at(count);
-					}
-				}
-			} break;
-		}
-		surface->set_bones(bones);
-		real_t renorm = weights[0] + weights[1] + weights[2] + weights[3];
-		if (renorm != 0.0 && renorm != 1.0) {
-			weights.write[0] /= renorm;
-			weights.write[1] /= renorm;
-			weights.write[2] /= renorm;
-			weights.write[3] /= renorm;
-		}
-		surface->set_weights(weights);
-		surface->add_vertex(point);
-	}
-}
-
 Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state) {
 	ERR_FAIL_NULL_V(r_state, nullptr);
 	Error err = FAILED;
 	List<String> deps;
-	HashMap<StringName, Variant> options;
+	const HashMap<StringName, Variant> options;
 	return import_scene(p_path, p_flags, options, p_bake_fps, &deps, &err, r_state);
 }
 
@@ -198,182 +97,184 @@ String EditorSceneImporterMMDPMX::convert_string(const std::string &s, uint8_t e
 }
 
 Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_flags, const HashMap<StringName, Variant> &p_options, int p_bake_fps, List<String> *r_missing_deps, Error *r_err, Ref<PMXMMDState> r_state) {
-	if (r_state == Ref<PMXMMDState>()) {
-		r_state.instantiate();
-	}
-	std::ifstream ifs(
-			ProjectSettings::get_singleton()->globalize_path(p_path).utf8().get_data(), std::ifstream::binary);
-	kaitai::kstream ks(&ifs);
-	mmd_pmx_t pmx = mmd_pmx_t(&ks);
-	Node3D *root = memnew(Node3D);
-	std::vector<std::unique_ptr<mmd_pmx_t::bone_t>> *bones = pmx.bones();
-	Skeleton3D *skeleton = memnew(Skeleton3D);
-	uint32_t bone_count = pmx.bone_count();
-	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		String output_name = convert_string(
-				bones->at(bone_i)->name()->value(), pmx.header()->encoding());
-		BoneId bone = skeleton->get_bone_count();
-		skeleton->add_bone(output_name);
-		if (!bones->at(bone_i)->enabled()) {
-			skeleton->set_bone_enabled(bone, false);
-		}
-	}
-	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		Transform3D xform;
-		real_t x = bones->at(bone_i)->position()->x();
-		x *= mmd_unit_conversion;
-		real_t y = bones->at(bone_i)->position()->y();
-		y *= mmd_unit_conversion;
-		real_t z = bones->at(bone_i)->position()->z();
-		z *= mmd_unit_conversion;
-		xform.origin = Vector3(x, y, z);
-		int64_t parent_index = -1;
-		if (is_valid_index(bones->at(bone_i)->parent_index())) {
-			parent_index = bones->at(bone_i)->parent_index()->value();
-			real_t parent_x = bones->at(parent_index)->position()->x();
-			parent_x *= mmd_unit_conversion;
-			real_t parent_y = bones->at(parent_index)->position()->y();
-			parent_y *= mmd_unit_conversion;
-			real_t parent_z = bones->at(parent_index)->position()->z();
-			parent_z *= mmd_unit_conversion;
-			xform.origin -= Vector3(parent_x, parent_y, parent_z);
-		}
-		xform.origin.z = -xform.origin.z;
-		skeleton->set_bone_rest(bone_i, xform);
-		skeleton->set_bone_pose_position(bone_i, xform.origin);
-		skeleton->set_bone_parent(bone_i, parent_index);
-	}
-	root->add_child(skeleton, true);
-	skeleton->set_owner(root);
-	std::vector<std::unique_ptr<mmd_pmx_t::material_t>> *materials = pmx.materials();
-	Vector<Ref<Texture2D>> texture_cache;
-	texture_cache.resize(pmx.texture_count());
-	for (uint32_t texture_cache_i = 0; texture_cache_i < pmx.texture_count(); texture_cache_i++) {
-		std::string raw_texture_path = pmx.textures()->at(texture_cache_i)->name()->value();
-		if (raw_texture_path.empty()) {
-			continue;
-		}
-		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
-		if (texture_path.is_empty()) {
-			continue;
-		}
-		texture_path = texture_path.strip_escapes();
-		texture_path = texture_path.strip_edges();
-		texture_path = texture_path.simplify_path();
-		texture_path = p_path.get_base_dir() + "/" + texture_path;
-		print_verbose(vformat("Found texture %s", texture_path));
-		Ref<Texture> base_color_tex = ResourceLoader::load(texture_path);
-		texture_cache.write[texture_cache_i] = base_color_tex;
-	}
+	return nullptr;
+	// if (r_state == Ref<PMXMMDState>()) {
+	// 	r_state.instantiate();
+	// }
+	// std::ifstream ifs(
+	// 		ProjectSettings::get_singleton()->globalize_path(p_path).utf8().get_data(), std::ifstream::binary);
+	// kaitai::kstream ks(&ifs);
+	// mmd_pmx_t pmx = mmd_pmx_t(&ks);
+	// Node3D *root = memnew(Node3D);
+	// std::vector<std::unique_ptr<mmd_pmx_t::bone_t>> *bones = pmx.bones();
+	// Skeleton3D *skeleton = memnew(Skeleton3D);
+	// uint8_t encoding = pmx.header()->encoding();
+	// for (uint32_t bone_i = 0; bone_i < bones->size(); bone_i++) {
+	// 	std::string bone_name = bones->at(bone_i)->name()->value();
+	// 	String output_name = convert_string(
+	// 			bone_name, encoding);
+	// 	BoneId bone = skeleton->get_bone_count();
+	// 	skeleton->add_bone(output_name);
+	// 	if (!bones->at(bone_i)->enabled()) {
+	// 		skeleton->set_bone_enabled(bone, false);
+	// 	}
+	// }
+	// for (uint32_t bone_i = 0; bone_i < bones->size(); bone_i++) {
+	// 	Transform3D xform;
+	// 	real_t x = bones->at(bone_i)->position()->x();
+	// 	x *= mmd_unit_conversion;
+	// 	real_t y = bones->at(bone_i)->position()->y();
+	// 	y *= mmd_unit_conversion;
+	// 	real_t z = bones->at(bone_i)->position()->z();
+	// 	z *= mmd_unit_conversion;
+	// 	xform.origin = Vector3(x, y, z);
+	// 	int64_t parent_index = -1;
+	// 	if (is_valid_index(bones->at(bone_i)->parent_index())) {
+	// 		parent_index = bones->at(bone_i)->parent_index()->value();
+	// 		real_t parent_x = bones->at(parent_index)->position()->x();
+	// 		parent_x *= mmd_unit_conversion;
+	// 		real_t parent_y = bones->at(parent_index)->position()->y();
+	// 		parent_y *= mmd_unit_conversion;
+	// 		real_t parent_z = bones->at(parent_index)->position()->z();
+	// 		parent_z *= mmd_unit_conversion;
+	// 		xform.origin -= Vector3(parent_x, parent_y, parent_z);
+	// 	}
+	// 	xform.origin.z = -xform.origin.z;
+	// 	skeleton->set_bone_rest(bone_i, xform);
+	// 	skeleton->set_bone_pose_position(bone_i, xform.origin);
+	// 	skeleton->set_bone_parent(bone_i, parent_index);
+	// }
+	// root->add_child(skeleton, true);
+	// skeleton->set_owner(root);
+	// std::vector<std::unique_ptr<mmd_pmx_t::material_t>> *materials = pmx.materials();
+	// Vector<Ref<Texture2D>> texture_cache;
+	// texture_cache.resize(pmx.texture_count());
+	// for (uint32_t texture_cache_i = 0; texture_cache_i < pmx.texture_count(); texture_cache_i++) {
+	// 	std::string raw_texture_path = pmx.textures()->at(texture_cache_i)->name()->value();
+	// 	if (raw_texture_path.empty()) {
+	// 		continue;
+	// 	}
+	// 	String texture_path = convert_string(raw_texture_path, encoding);
+	// 	if (texture_path.is_empty()) {
+	// 		continue;
+	// 	}
+	// 	texture_path = texture_path.strip_escapes();
+	// 	texture_path = texture_path.strip_edges();
+	// 	texture_path = texture_path.simplify_path();
+	// 	texture_path = p_path.get_base_dir() + "/" + texture_path;
+	// 	print_verbose(vformat("Found texture %s", texture_path));
+	// 	Ref<Texture> base_color_tex = ResourceLoader::load(texture_path);
+	// 	texture_cache.write[texture_cache_i] = base_color_tex;
+	// }
 
-	Vector<Ref<StandardMaterial3D>> material_cache;
-	material_cache.resize(pmx.material_count());
-	for (uint32_t material_cache_i = 0; material_cache_i < pmx.material_count(); material_cache_i++) {
-		Ref<StandardMaterial3D> material;
-		material.instantiate();
-		String texture_path;
-		int64_t texture_index = materials->at(material_cache_i)->texture_index()->value();
-		if (is_valid_index(materials->at(material_cache_i)->texture_index())) {
-			if (texture_index >= texture_cache.size()) {
-				continue;
-			}
-			if (texture_cache[texture_index].is_null()) {
-				continue;
-			}
-			material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture_cache[texture_index]);
-		}
-		mmd_pmx_t::color4_t *diffuse = materials->at(material_cache_i)->diffuse();
-		material->set_albedo(Color(diffuse->r(), diffuse->g(), diffuse->b(), diffuse->a()));
-		String material_name = convert_string(materials->at(material_cache_i)->name()->value(), pmx.header()->encoding());
-		material->set_name(material_name);
-		material_cache.write[material_cache_i] = material;
-	}
+	// Vector<Ref<StandardMaterial3D>> material_cache;
+	// material_cache.resize(pmx.material_count());
+	// for (uint32_t material_cache_i = 0; material_cache_i < materials->size(); material_cache_i++) {
+	// 	Ref<StandardMaterial3D> material;
+	// 	material.instantiate();
+	// 	String texture_path;
+	// 	int64_t texture_index = materials->at(material_cache_i)->texture_index()->value();
+	// 	if (is_valid_index(materials->at(material_cache_i)->texture_index())) {
+	// 		if (texture_index >= texture_cache.size()) {
+	// 			continue;
+	// 		}
+	// 		if (texture_cache[texture_index].is_null()) {
+	// 			continue;
+	// 		}
+	// 		material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture_cache[texture_index]);
+	// 	}
+	// 	mmd_pmx_t::color4_t *diffuse = materials->at(material_cache_i)->diffuse();
+	// 	material->set_albedo(Color(diffuse->r(), diffuse->g(), diffuse->b(), diffuse->a()));
+	// 	String material_name = convert_string(materials->at(material_cache_i)->name()->value(), encoding);
+	// 	material->set_name(material_name);
+	// 	material_cache.write[material_cache_i] = material;
+	// }
 
-	uint32_t face_start = 0;
-	for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
-		Ref<SurfaceTool> surface;
-		surface.instantiate();
-		surface->begin(Mesh::PRIMITIVE_TRIANGLES);
-		std::vector<std::unique_ptr<mmd_pmx_t::vertex_t>> *vertices = pmx.vertices();
-		if (!vertices->size()) {
-			continue;
-		}
-		std::vector<std::unique_ptr<mmd_pmx_t::face_t>> *faces = pmx.faces();
-		if (!faces) {
-			continue;
-		}
-		if (!faces->size()) {
-			continue;
-		}
-		uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
-		// Add the vertices directly without indices
-		for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
-			if (face_i >= faces->size()) {
-				continue;
-			}
-			if (!faces->at(face_i).get()) {
-				continue;
-			}
-			if (!faces->at(face_i)->indices()->at(0).get()) {
-				continue;
-			}
-			if (!is_valid_index(faces->at(face_i)->indices()->at(0).get())) {
-				continue;
-			}
-			uint32_t index = faces->at(face_i)->indices()->at(0)->value();
-			if(index >= vertices->size()) {
-				continue;
-			}
-			add_vertex(surface, vertices->at(index).get());
-			if (!is_valid_index(faces->at(face_i)->indices()->at(1).get())) {
-				continue;
-			}
-			index = faces->at(face_i)->indices()->at(1)->value();
-			add_vertex(surface, vertices->at(index).get());
-			if (!is_valid_index(faces->at(face_i)->indices()->at(2).get())) {
-				continue;
-			}
-			index = faces->at(face_i)->indices()->at(2)->value();
-			add_vertex(surface, vertices->at(index).get());
-		}
-		Array mesh_array = surface->commit_to_arrays();
-		Ref<Material> material = material_cache[material_i];
-		String name;
-		if (material.is_valid()) {
-			name = material->get_name();
-		}
-		Ref<ImporterMesh> mesh;
-		mesh.instantiate();
-		mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, name);
-		face_start = face_end;
-		ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
-		skeleton->add_child(mesh_3d, true);
-		mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
-		mesh_3d->set_mesh(mesh);
-		mesh_3d->set_owner(root);
-		mesh_3d->set_skeleton_path(NodePath(".."));
-		mesh_3d->set_name(name);
-	}
+	// uint32_t face_start = 0;
+	// for (uint32_t material_i = 0; material_i < materials->size(); material_i++) {
+	// 	Ref<SurfaceTool> surface;
+	// 	surface.instantiate();
+	// 	surface->begin(Mesh::PRIMITIVE_TRIANGLES);
+	// 	std::vector<std::unique_ptr<mmd_pmx_t::vertex_t>> *vertices = pmx.vertices();
+	// 	if (vertices->empty()) {
+	// 		continue;
+	// 	}
+	// 	std::vector<std::unique_ptr<mmd_pmx_t::face_t>> *faces = pmx.faces();
+	// 	if (!faces) {
+	// 		continue;
+	// 	}
+	// 	if (faces->empty()) {
+	// 		continue;
+	// 	}
+	// 	uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
+	// 	// Add the vertices directly without indices
+	// 	for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
+	// 		if (face_i >= faces->size()) {
+	// 			continue;
+	// 		}
+	// 		if (!faces->at(face_i)) {
+	// 			continue;
+	// 		}
+	// 		if (!faces->at(face_i)->indices()->at(0)) {
+	// 			continue;
+	// 		}
+	// 		if (!is_valid_index(faces->at(face_i)->indices()->at(0).get())) {
+	// 			continue;
+	// 		}
+	// 		uint32_t index = faces->at(face_i)->indices()->at(0)->value();
+	// 		if(index >= vertices->size()) {
+	// 			continue;
+	// 		}
+	// 		add_vertex(surface, vertices->at(index).get());
+	// 		if (!is_valid_index(faces->at(face_i)->indices()->at(1).get())) {
+	// 			continue;
+	// 		}
+	// 		index = faces->at(face_i)->indices()->at(1)->value();
+	// 		add_vertex(surface, vertices->at(index).get());
+	// 		if (!is_valid_index(faces->at(face_i)->indices()->at(2).get())) {
+	// 			continue;
+	// 		}
+	// 		index = faces->at(face_i)->indices()->at(2)->value();
+	// 		add_vertex(surface, vertices->at(index).get());
+	// 	}
+	// 	Array mesh_array = surface->commit_to_arrays();
+	// 	Ref<Material> material = material_cache[material_i];
+	// 	String name;
+	// 	if (material.is_valid()) {
+	// 		name = material->get_name();
+	// 	}
+	// 	Ref<ImporterMesh> mesh;
+	// 	mesh.instantiate();
+	// 	mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, name);
+	// 	face_start = face_end;
+	// 	ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
+	// 	skeleton->add_child(mesh_3d, true);
+	// 	mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
+	// 	mesh_3d->set_mesh(mesh);
+	// 	mesh_3d->set_owner(root);
+	// 	mesh_3d->set_skeleton_path(NodePath(".."));
+	// 	mesh_3d->set_name(name);
+	// }
 
-	std::vector<std::unique_ptr<mmd_pmx_t::rigid_body_t>> *rigid_bodies = pmx.rigid_bodies();
-	for (uint32_t rigid_bodies_i = 0; rigid_bodies_i < pmx.rigid_body_count(); rigid_bodies_i++) {
-		StaticBody3D *static_body_3d = memnew(StaticBody3D);
-		String rigid_name = convert_string(rigid_bodies->at(rigid_bodies_i)->name()->value(), pmx.header()->encoding());
-		Transform3D xform;
-		Basis basis;
-		basis.set_euler(Vector3(
-				rigid_bodies->at(rigid_bodies_i)->rotation()->x(),
-				rigid_bodies->at(rigid_bodies_i)->rotation()->y(),
-				-rigid_bodies->at(rigid_bodies_i)->rotation()->z()));
-		xform.basis = basis;
-		Vector3 point = Vector3(rigid_bodies->at(rigid_bodies_i)->position()->x() * mmd_unit_conversion,
-				rigid_bodies->at(rigid_bodies_i)->position()->y() * mmd_unit_conversion,
-				-rigid_bodies->at(rigid_bodies_i)->position()->z() * mmd_unit_conversion);
-		xform.origin = point;
-		static_body_3d->set_transform(xform);
-		static_body_3d->set_name(rigid_name);
-		root->add_child(static_body_3d, true);
-		static_body_3d->set_owner(root);
-	}
-	return root;
+	// std::vector<std::unique_ptr<mmd_pmx_t::rigid_body_t>> *rigid_bodies = pmx.rigid_bodies();
+	// for (uint32_t rigid_bodies_i = 0; rigid_bodies_i < rigid_bodies->size(); rigid_bodies_i++) {
+	// 	StaticBody3D *static_body_3d = memnew(StaticBody3D);
+	// 	String rigid_name = convert_string(rigid_bodies->at(rigid_bodies_i)->name()->value(), encoding);
+	// 	Transform3D xform;
+	// 	Basis basis;
+	// 	basis.set_euler(Vector3(
+	// 			rigid_bodies->at(rigid_bodies_i)->rotation()->x(),
+	// 			rigid_bodies->at(rigid_bodies_i)->rotation()->y(),
+	// 			-rigid_bodies->at(rigid_bodies_i)->rotation()->z()));
+	// 	xform.basis = basis;
+	// 	Vector3 point = Vector3(rigid_bodies->at(rigid_bodies_i)->position()->x() * mmd_unit_conversion,
+	// 			rigid_bodies->at(rigid_bodies_i)->position()->y() * mmd_unit_conversion,
+	// 			-rigid_bodies->at(rigid_bodies_i)->position()->z() * mmd_unit_conversion);
+	// 	xform.origin = point;
+	// 	static_body_3d->set_transform(xform);
+	// 	static_body_3d->set_name(rigid_name);
+	// 	root->add_child(static_body_3d, true);
+	// 	static_body_3d->set_owner(root);
+	// }
+	// return root;
 }
