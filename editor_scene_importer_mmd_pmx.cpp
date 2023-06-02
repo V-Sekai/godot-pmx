@@ -32,6 +32,7 @@
 
 #include "core/config/project_settings.h"
 #include "core/core_bind.h"
+#include "core/io/dir_access.h"
 #include "core/templates/local_vector.h"
 #include "scene/3d/importer_mesh_instance_3d.h"
 #include "scene/3d/mesh_instance_3d.h"
@@ -253,10 +254,12 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 
 		Ref<Texture2D> base_color_tex = ResourceLoader::load(texture_path, "Texture2D");
 
-		// If the texture is not found, try loading it with the lowercase path.
+		// If the texture is not found, try loading it with a case-insensitive search.
 		if (base_color_tex.is_null()) {
-			String lower_case_texture_path = texture_path.to_lower();
-			base_color_tex = ResourceLoader::load(lower_case_texture_path, "Texture2D");
+			String found_file = find_file_case_insensitive_recursive(texture_path.get_file(), texture_path.get_base_dir());
+			if (!found_file.is_empty()) {
+				base_color_tex = ResourceLoader::load(found_file, "Texture2D");
+			}
 		}
 
 		ERR_CONTINUE_MSG(base_color_tex.is_null(), vformat("Can't load texture: %s", texture_path));
@@ -380,4 +383,38 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		static_body_3d->set_owner(root);
 	}
 	return root;
+}
+
+String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const String &target, const String &path) {
+	Ref<DirAccess> dir = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	Error err = dir->change_dir(path);
+	if (err != OK) {
+		print_error("Failed to open directory: " + path);
+		return String();
+	}
+
+	String target_lower = target.to_lower();
+	dir->list_dir_begin();
+	String file_name = dir->get_next();
+	while (!file_name.is_empty()) {
+		if (dir->current_is_dir()) {
+			// Recursively search in subdirectories.
+			String sub_path = path + "/" + file_name;
+			String found_file = find_file_case_insensitive_recursive(target, sub_path);
+			if (!found_file.is_empty()) {
+				dir->list_dir_end();
+				return found_file;
+			}
+		} else if (file_name.to_lower() == target_lower) {
+			// Found the file.
+			dir->list_dir_end();
+			return path + "/" + file_name;
+		}
+
+		file_name = dir->get_next();
+	}
+
+	// File not found.
+	dir->list_dir_end();
+	return String();
 }
