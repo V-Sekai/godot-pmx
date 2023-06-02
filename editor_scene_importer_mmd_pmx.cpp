@@ -204,72 +204,6 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	Node3D *root = memnew(Node3D);
 	std::vector<std::unique_ptr<mmd_pmx_t::bone_t>> *bones = pmx.bones();
 
-	Dictionary bone_name_map;
-	bone_name_map[String("頭")] = String("Head");
-	bone_name_map[String("首")] = String("Neck");
-	bone_name_map[String("手首.R")] = String("RightHand");
-	bone_name_map[String("手捩.R")] = String("RightLowerArm");
-	bone_name_map[String("ひじ.R")] = String("RightUpperArm");
-	bone_name_map[String("腕捩.R")] = String("RightShoulder");
-	bone_name_map[String("手首.L")] = String("LeftHand");
-	bone_name_map[String("ひじ.L")] = String("LeftLowerArm");
-	bone_name_map[String("腕.L")] = String("LeftUpperArm");
-	bone_name_map[String("肩.L")] = String("LeftShoulder");
-	bone_name_map[String("上半身2")] = String("Chest");
-	bone_name_map[String("上半身")] = String("Spine");
-	bone_name_map[String("上半身1")] = String("UpperChest");
-	bone_name_map[String("足D.R")] = String("RightUpperLeg");
-	bone_name_map[String("ひざD.R")] = String("RightLowerLeg");
-	bone_name_map[String("足首D.R")] = String("RightFoot");
-	bone_name_map[String("ひざD.L")] = String("LeftLowerLeg");
-	bone_name_map[String("足D.L")] = String("LeftUpperLeg");
-	bone_name_map[String("足首D.L")] = String("LeftFoot");
-	bone_name_map[String("腰")] = String("Hips");
-	bone_name_map[String("足先EX.L")] = String("LeftToes");
-	bone_name_map[String("足先EX.R")] = String("RightToes");
-	bone_name_map[String("目.L")] = String("LeftEye");
-	bone_name_map[String("目.R")] = String("RightEye");
-	bone_name_map[String("顎")] = String("Jaw");
-	bone_name_map[String("親指０.L")] = String("LeftThumbProximal");
-	bone_name_map[String("親指１.L")] = String("LeftThumbIntermediate");
-	bone_name_map[String("親指２.L")] = String("LeftThumbMetacarpal");
-	bone_name_map[String("人指１.L")] = String("LeftIndexProximal");
-	bone_name_map[String("人指２.L")] = String("LeftIndexIntermediate");
-	bone_name_map[String("人指３.L")] = String("LeftIndexDistal");
-	bone_name_map[String("中指１.L")] = String("LeftMiddleProximal");
-	bone_name_map[String("中指２.L")] = String("LeftMiddleIntermediate");
-	bone_name_map[String("中指３.L")] = String("LeftMiddleDistal");
-	bone_name_map[String("薬指１.L")] = String("LeftRingProximal");
-	bone_name_map[String("薬指２.L")] = String("LeftRingIntermediate");
-	bone_name_map[String("薬指３.L")] = String("LeftRingDistal");
-	bone_name_map[String("小指１.L")] = String("LeftLittleProximal");
-	bone_name_map[String("小指２.L")] = String("LeftLittleIntermediate");
-	bone_name_map[String("小指３.L")] = String("LeftLittleDistal");
-	bone_name_map[String("親指０.R")] = String("RightThumbProximal");
-	bone_name_map[String("親指１.R")] = String("RightThumbIntermediate");
-	bone_name_map[String("親指２.R")] = String("RightThumbMetacarpal");
-	bone_name_map[String("人指１.R")] = String("RightIndexProximal");
-	bone_name_map[String("人指２.R")] = String("RightIndexIntermediate");
-	bone_name_map[String("人指３.R")] = String("RightIndexDistal");
-	bone_name_map[String("中指１.R")] = String("RightMiddleProximal");
-	bone_name_map[String("中指２.R")] = String("RightMiddleIntermediate");
-	bone_name_map[String("中指３.R")] = String("RightMiddleDistal");
-	bone_name_map[String("薬指１.R")] = String("RightRingProximal");
-	bone_name_map[String("薬指２.R")] = String("RightRingIntermediate");
-	bone_name_map[String("薬指３.R")] = String("RightRingDistal");
-	bone_name_map[String("小指１.R")] = String("RightLittleProximal");
-	bone_name_map[String("小指２.R")] = String("RightLittleIntermediate");
-	bone_name_map[String("小指３.R")] = String("RightLittleDistal");
-
-	bone_name_map[String("右足")] = String("RightUpperLeg");
-	bone_name_map[String("右ひざ")] = String("RightLowerLeg");
-	bone_name_map[String("右足首")] = String("RightFoot");
-	bone_name_map[String("左足")] = String("LeftUpperLeg");
-	bone_name_map[String("左ひざ")] = String("LeftLowerLeg");
-	bone_name_map[String("左足首")] = String("LeftFoot");
-	bone_name_map[String("右つま先")] = String("RightToes");
-	bone_name_map[String("左つま先")] = String("LeftToes");
-
 	Skeleton3D *skeleton = memnew(Skeleton3D);
 	uint32_t bone_count = pmx.bone_count();
 	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
@@ -279,11 +213,6 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		skeleton->add_bone(japanese_name);
 		if (!bones->at(bone_i)->enabled()) {
 			skeleton->set_bone_enabled(bone, false);
-		}
-		if (bone_name_map.has(japanese_name)) {
-			print_line(japanese_name);
-			String output_name = bone_name_map[japanese_name];
-			skeleton->set_bone_name(bone, output_name);
 		}
 	}
 
