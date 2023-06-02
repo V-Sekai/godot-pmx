@@ -1,11 +1,11 @@
-Import('env')
+Import("env")
 Import("env_modules")
 
 env_mmd = env_modules.Clone()
-env_mmd.Prepend(CPPPATH=['#thirdparty/icu4c/common/'])
-env_mmd.Prepend(CPPPATH=['thirdparty/ksy/'])
-env_mmd.Prepend(CPPPATH=['.'])
-env_mmd.Append(CPPDEFINES=['KS_STR_ENCODING_SHIFT_JIS'])
+env_mmd.Prepend(CPPPATH=["#thirdparty/icu4c/common/"])
+env_mmd.Prepend(CPPPATH=["thirdparty/ksy/"])
+env_mmd.Prepend(CPPPATH=["."])
+env_mmd.Append(CPPDEFINES=["KS_STR_ENCODING_SHIFT_JIS"])
 icu_data_name = "icudt70l.dat"
 env_mmd.Append(
     CXXFLAGS=[
@@ -31,4 +31,3 @@ env_thirdparty.add_source_files(module_obj, "thirdparty/ksy/*.cpp")
 
 env_mmd.add_source_files(module_obj, "*.cpp")
 env.modules_sources += module_obj
-
