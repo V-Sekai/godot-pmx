@@ -248,7 +248,7 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		if (raw_texture_path.empty()) {
 			continue;
 		}
-		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding()).strip_escapes().strip_edges().simplify_path();
+		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding()).simplify_path();
 		texture_path = p_path.get_base_dir() + "/" + texture_path;
 		print_verbose(vformat("Found texture %s", texture_path));
 
