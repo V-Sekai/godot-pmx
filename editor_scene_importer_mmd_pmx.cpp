@@ -324,7 +324,7 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 			mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
 			mesh_3d->set_mesh(mesh);
 			mesh_3d->set_owner(root);
-			mesh_3d->set_skeleton_path(NodePath(".."));
+			mesh_3d->set_skeleton_path(mesh_3d->get_path_to(skeleton));
 			mesh_3d->set_name(name);
 		}
 	}
