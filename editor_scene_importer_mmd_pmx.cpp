@@ -369,10 +369,11 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 }
 
 String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const String &target, const String &path) {
+	String new_path = path.simplify_path();
 	Ref<DirAccess> dir = DirAccess::create(DirAccess::ACCESS_RESOURCES);
-	Error err = dir->change_dir(path);
+	Error err = dir->change_dir(new_path);
 	if (err != OK) {
-		print_error("Failed to open directory: " + path);
+		print_error("Failed to open directory: " + new_path);
 		return String();
 	}
 
@@ -380,9 +381,9 @@ String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const Str
 	dir->list_dir_begin();
 	String file_name = dir->get_next();
 	while (!file_name.is_empty()) {
-		if (dir->current_is_dir()) {
+		if (dir->current_is_dir() && file_name != "." && file_name != "..") {
 			// Recursively search in subdirectories.
-			String sub_path = path + "/" + file_name;
+			String sub_path = new_path + "/" + file_name;
 			String found_file = find_file_case_insensitive_recursive(target, sub_path);
 			if (!found_file.is_empty()) {
 				dir->list_dir_end();
@@ -391,7 +392,7 @@ String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const Str
 		} else if (file_name.to_lower() == target_lower) {
 			// Found the file.
 			dir->list_dir_end();
-			return path + "/" + file_name;
+			return new_path + "/" + file_name;
 		}
 
 		file_name = dir->get_next();
