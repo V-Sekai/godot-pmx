@@ -284,9 +284,14 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 
 	uint32_t face_start = 0;
 	std::vector<std::unique_ptr<mmd_pmx_t::vertex_t>> *vertices = pmx.vertices();
+
 	if (vertices->size()) {
-		Ref<ImporterMesh> mesh;
-		mesh.instantiate();
+		LocalVector<String> blend_shapes;
+		for (int morph_i = 0; morph_i < pmx.morph_count(); ++morph_i) {
+			String name = convert_string(
+					pmx.morphs()->at(morph_i).get()->english_name()->value(), pmx.header()->encoding());
+			blend_shapes.push_back(name);
+		}
 		for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
 			Ref<SurfaceTool> surface;
 			surface.instantiate();
@@ -324,41 +329,23 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 
 			Array blend_shape_data;
 
-			// for (int morph_i = 0; morph_i < pmx.morph_count(); ++morph_i) {
-			// 	Array mesh_array;
-			// 	mesh_array.resize(ArrayMesh::ARRAY_MAX);
-			// 	Vector<Vector3> blend_vertices;
-			// 	Vector<Vector3> blend_normals;
-			// 	Vector<Plane> blend_tangents;
-			// 	for (const auto& vertex : pmx.morphs()->at(morph_i).get() vertices) {
-			// 		blend_vertices.push_back(vertex.position);
-			// 		blend_normals.push_back(vertex.normal);
-			// 		blend_tangents.push_back(Plane(vertex.tangent));
-			// 	}
-			// 	mesh_array[Mesh::ARRAY_VERTEX] = blend_vertices;
-			// 	mesh_array[Mesh::ARRAY_NORMAL] = blend_normals;
-			// 	mesh_array[Mesh::ARRAY_TANGENT] = blend_tangents;
-			// }
-
+			Ref<ImporterMesh> mesh;
+			mesh.instantiate();
 			mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, blend_shape_data, Dictionary(), material, name);
 			face_start = face_end;
+
+			// Create a new ImporterMeshInstance3D for each new mesh
 			ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
 			skeleton->add_child(mesh_3d, true);
 			mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
 			mesh_3d->set_mesh(mesh);
 			mesh_3d->set_owner(root);
 			mesh_3d->set_skeleton_path(mesh_3d->get_path_to(skeleton));
-			mesh_3d->set_name(name);
-		}
 
-		LocalVector<String> blend_shapes;
-		for (int morph_i = 0; morph_i < pmx.morph_count(); ++morph_i) {
-			String name = convert_string(
-					pmx.morphs()->at(morph_i).get()->english_name()->value(), pmx.header()->encoding());
-			blend_shapes.push_back(name);
-		}
-		for (const String &blend_shape : blend_shapes) {
-			mesh->add_blend_shape(blend_shape);
+			mesh_3d->set_name(name);
+			for (const String &blend_shape : blend_shapes) {
+				mesh->add_blend_shape(blend_shape);
+			}
 		}
 	}
 
