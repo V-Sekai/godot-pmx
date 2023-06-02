@@ -341,11 +341,7 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 			mesh_3d->set_mesh(mesh);
 			mesh_3d->set_owner(root);
 			mesh_3d->set_skeleton_path(mesh_3d->get_path_to(skeleton));
-
 			mesh_3d->set_name(name);
-			for (const String &blend_shape : blend_shapes) {
-				mesh->add_blend_shape(blend_shape);
-			}
 		}
 	}
 
