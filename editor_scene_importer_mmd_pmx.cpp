@@ -36,6 +36,7 @@
 #include "scene/3d/mesh_instance_3d.h"
 #include "scene/3d/node_3d.h"
 #include "scene/3d/physics_body_3d.h"
+#include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
 #include "scene/resources/animation.h"
 #include "scene/resources/importer_mesh.h"
@@ -181,7 +182,7 @@ String EditorSceneImporterMMDPMX::convert_string(const std::string &s, uint8_t e
 	if (encoding == 0) {
 		Vector<char16_t> buf;
 		buf.resize(s.length() / 2);
-		memcpy(buf.ptrw(), s.c_str(), s.length());
+		memcpy(buf.ptrw(), s.c_str(), s.length() / 2 * sizeof(char16_t));
 		output.parse_utf16(buf.ptr(), buf.size());
 	} else {
 		output.parse_utf8(s.data(), s.length());
@@ -201,33 +202,30 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	std::vector<std::unique_ptr<mmd_pmx_t::bone_t>> *bones = pmx.bones();
 	Skeleton3D *skeleton = memnew(Skeleton3D);
 	uint32_t bone_count = pmx.bone_count();
+
 	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
 		String output_name = convert_string(
 				bones->at(bone_i)->name()->value(), pmx.header()->encoding());
-		BoneId bone = skeleton->get_bone_count();
+		int32_t bone = skeleton->get_bone_count();
 		skeleton->add_bone(output_name);
 		if (!bones->at(bone_i)->enabled()) {
 			skeleton->set_bone_enabled(bone, false);
 		}
 	}
+
 	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
 		Transform3D xform;
-		real_t x = bones->at(bone_i)->position()->x();
-		x *= mmd_unit_conversion;
-		real_t y = bones->at(bone_i)->position()->y();
-		y *= mmd_unit_conversion;
-		real_t z = bones->at(bone_i)->position()->z();
-		z *= mmd_unit_conversion;
+		real_t x = bones->at(bone_i)->position()->x() * mmd_unit_conversion;
+		real_t y = bones->at(bone_i)->position()->y() * mmd_unit_conversion;
+		real_t z = bones->at(bone_i)->position()->z() * mmd_unit_conversion;
 		xform.origin = Vector3(x, y, z);
-		int64_t parent_index = -1;
+
+		BoneId parent_index = -1;
 		if (is_valid_index(bones->at(bone_i)->parent_index())) {
 			parent_index = bones->at(bone_i)->parent_index()->value();
-			real_t parent_x = bones->at(parent_index)->position()->x();
-			parent_x *= mmd_unit_conversion;
-			real_t parent_y = bones->at(parent_index)->position()->y();
-			parent_y *= mmd_unit_conversion;
-			real_t parent_z = bones->at(parent_index)->position()->z();
-			parent_z *= mmd_unit_conversion;
+			real_t parent_x = bones->at(parent_index)->position()->x() * mmd_unit_conversion;
+			real_t parent_y = bones->at(parent_index)->position()->y() * mmd_unit_conversion;
+			real_t parent_z = bones->at(parent_index)->position()->z() * mmd_unit_conversion;
 			xform.origin -= Vector3(parent_x, parent_y, parent_z);
 		}
 		xform.origin.z = -xform.origin.z;
@@ -235,26 +233,32 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		skeleton->set_bone_pose_position(bone_i, xform.origin);
 		skeleton->set_bone_parent(bone_i, parent_index);
 	}
+
 	root->add_child(skeleton, true);
 	skeleton->set_owner(root);
+
 	std::vector<std::unique_ptr<mmd_pmx_t::material_t>> *materials = pmx.materials();
 	Vector<Ref<Texture2D>> texture_cache;
 	texture_cache.resize(pmx.texture_count());
+
 	for (uint32_t texture_cache_i = 0; texture_cache_i < pmx.texture_count(); texture_cache_i++) {
 		std::string raw_texture_path = pmx.textures()->at(texture_cache_i)->name()->value();
 		if (raw_texture_path.empty()) {
 			continue;
 		}
-		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding());
-		if (texture_path.is_empty()) {
-			continue;
-		}
-		texture_path = texture_path.strip_escapes();
-		texture_path = texture_path.strip_edges();
-		texture_path = texture_path.simplify_path();
+		String texture_path = convert_string(raw_texture_path, pmx.header()->encoding()).strip_escapes().strip_edges().simplify_path();
 		texture_path = p_path.get_base_dir() + "/" + texture_path;
 		print_verbose(vformat("Found texture %s", texture_path));
-		Ref<Texture> base_color_tex = ResourceLoader::load(texture_path);
+
+		Ref<Texture2D> base_color_tex = ResourceLoader::load(texture_path, "Texture2D");
+
+		// If the texture is not found, try loading it with the lowercase path.
+		if (base_color_tex.is_null()) {
+			String lower_case_texture_path = texture_path.to_lower();
+			base_color_tex = ResourceLoader::load(lower_case_texture_path, "Texture2D");
+		}
+
+		ERR_CONTINUE_MSG(base_color_tex.is_null(), vformat("Can't load texture: %s", texture_path));
 		texture_cache.write[texture_cache_i] = base_color_tex;
 	}
 
@@ -263,15 +267,8 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	for (uint32_t material_cache_i = 0; material_cache_i < pmx.material_count(); material_cache_i++) {
 		Ref<StandardMaterial3D> material;
 		material.instantiate();
-		String texture_path;
-		int64_t texture_index = materials->at(material_cache_i)->texture_index()->value();
-		if (is_valid_index(materials->at(material_cache_i)->texture_index())) {
-			if (texture_index >= texture_cache.size()) {
-				continue;
-			}
-			if (texture_cache[texture_index].is_null()) {
-				continue;
-			}
+		int32_t texture_index = materials->at(material_cache_i)->texture_index()->value();
+		if (is_valid_index(materials->at(material_cache_i)->texture_index()) && texture_index < texture_cache.size() && !texture_cache[texture_index].is_null()) {
 			material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture_cache[texture_index]);
 		}
 		mmd_pmx_t::color4_t *diffuse = materials->at(material_cache_i)->diffuse();
@@ -282,69 +279,54 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	}
 
 	uint32_t face_start = 0;
-	for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
-		Ref<SurfaceTool> surface;
-		surface.instantiate();
-		surface->begin(Mesh::PRIMITIVE_TRIANGLES);
-		std::vector<std::unique_ptr<mmd_pmx_t::vertex_t>> *vertices = pmx.vertices();
-		if (!vertices->size()) {
-			continue;
+	std::vector<std::unique_ptr<mmd_pmx_t::vertex_t>> *vertices = pmx.vertices();
+	if (vertices->size()) {
+		for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
+			Ref<SurfaceTool> surface;
+			surface.instantiate();
+			surface->begin(Mesh::PRIMITIVE_TRIANGLES);
+			std::vector<std::unique_ptr<mmd_pmx_t::face_t>> *faces = pmx.faces();
+			if (!faces || !faces->size()) {
+				continue;
+			}
+			uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
+
+			// Add the vertices directly without indices
+			for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
+				if (face_i >= faces->size() || !faces->at(face_i).get()) {
+					continue;
+				}
+				for (int i = 0; i < 3; i++) {
+					auto index_ptr = faces->at(face_i)->indices()->at(i).get();
+					if (!is_valid_index(index_ptr)) {
+						continue;
+					}
+					uint32_t index = index_ptr->value();
+					if (index >= vertices->size()) {
+						continue;
+					}
+					add_vertex(surface, vertices->at(index).get());
+				}
+			}
+
+			Array mesh_array = surface->commit_to_arrays();
+			Ref<Material> material = material_cache[material_i];
+			String name;
+			if (material.is_valid()) {
+				name = material->get_name();
+			}
+			Ref<ImporterMesh> mesh;
+			mesh.instantiate();
+			mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, name);
+			face_start = face_end;
+			ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
+			skeleton->add_child(mesh_3d, true);
+			mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
+			mesh_3d->set_mesh(mesh);
+			mesh_3d->set_owner(root);
+			mesh_3d->set_skeleton_path(NodePath(".."));
+			mesh_3d->set_name(name);
 		}
-		std::vector<std::unique_ptr<mmd_pmx_t::face_t>> *faces = pmx.faces();
-		if (!faces) {
-			continue;
-		}
-		if (!faces->size()) {
-			continue;
-		}
-		uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
-		// Add the vertices directly without indices
-		for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
-			if (face_i >= faces->size()) {
-				continue;
-			}
-			if (!faces->at(face_i).get()) {
-				continue;
-			}
-			if (!faces->at(face_i)->indices()->at(0).get()) {
-				continue;
-			}
-			if (!is_valid_index(faces->at(face_i)->indices()->at(0).get())) {
-				continue;
-			}
-			uint32_t index = faces->at(face_i)->indices()->at(0)->value();
-			if(index >= vertices->size()) {
-				continue;
-			}
-			add_vertex(surface, vertices->at(index).get());
-			if (!is_valid_index(faces->at(face_i)->indices()->at(1).get())) {
-				continue;
-			}
-			index = faces->at(face_i)->indices()->at(1)->value();
-			add_vertex(surface, vertices->at(index).get());
-			if (!is_valid_index(faces->at(face_i)->indices()->at(2).get())) {
-				continue;
-			}
-			index = faces->at(face_i)->indices()->at(2)->value();
-			add_vertex(surface, vertices->at(index).get());
-		}
-		Array mesh_array = surface->commit_to_arrays();
-		Ref<Material> material = material_cache[material_i];
-		String name;
-		if (material.is_valid()) {
-			name = material->get_name();
-		}
-		Ref<ImporterMesh> mesh;
-		mesh.instantiate();
-		mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, Array(), Dictionary(), material, name);
-		face_start = face_end;
-		ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
-		skeleton->add_child(mesh_3d, true);
-		mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
-		mesh_3d->set_mesh(mesh);
-		mesh_3d->set_owner(root);
-		mesh_3d->set_skeleton_path(NodePath(".."));
-		mesh_3d->set_name(name);
 	}
 
 	std::vector<std::unique_ptr<mmd_pmx_t::rigid_body_t>> *rigid_bodies = pmx.rigid_bodies();
