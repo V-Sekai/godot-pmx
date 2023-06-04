@@ -28,8 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef EDITOR_SCENE_IMPORTER_MMX_PMX_H
-#define EDITOR_SCENE_IMPORTER_MMX_PMX_H
+#ifndef EDITOR_SCENE_IMPORTER_MMD_PMX_H
+#define EDITOR_SCENE_IMPORTER_MMD_PMX_H
 
 #include "editor/import/resource_importer_scene.h"
 #include "scene/main/node.h"
@@ -63,4 +63,4 @@ class PMXMMDState : public Resource {
 	GDCLASS(PMXMMDState, Resource);
 };
 
-#endif // EDITOR_SCENE_IMPORTER_MMX_PMX_H
+#endif // EDITOR_SCENE_IMPORTER_MMD_PMX_H
