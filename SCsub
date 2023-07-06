@@ -1,10 +1,13 @@
+import os
+
 Import("env")
 Import("env_modules")
 
 env_mmd = env_modules.Clone()
+thirdparty_dir = os.path.abspath(".")
+env_mmd.Prepend(CPPPATH=[thirdparty_dir])
 env_mmd.Prepend(CPPPATH=["#thirdparty/icu4c/common/"])
 env_mmd.Prepend(CPPPATH=["thirdparty/ksy/"])
-env_mmd.Prepend(CPPPATH=["."])
 env_mmd.Append(CPPDEFINES=["KS_STR_ENCODING_SHIFT_JIS"])
 icu_data_name = "icudt70l.dat"
 env_mmd.Append(
