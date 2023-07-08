@@ -482,7 +482,7 @@ mmd_pmd_t::header_t::header_t(kaitai::kstream* p__io, mmd_pmd_t* p__parent, mmd_
 void mmd_pmd_t::header_t::_read() {
     m_magic = m__io->read_bytes(3);
     if (!(magic() == std::string("\x50\x6D\x64", 3))) {
-        throw kaitai::validation_not_equal_error<std::string>(std::string("\x50\x6D\x64", 3), magic(), _io(), std::string("/types/header/seq/0"));
+        return;
     }
     m_version = m__io->read_u4le();
     m_model_name = kaitai::kstream::bytes_to_str(kaitai::kstream::bytes_terminate(m__io->read_bytes(20), 0, false), std::string("Shift_JIS"));

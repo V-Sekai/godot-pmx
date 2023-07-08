@@ -38,7 +38,7 @@ void mmd_vmd_t::_read() {
     }
     m_reserved = m__io->read_bytes(8);
     if (!(reserved() == std::string("\x00\x00\x00\x00\x00\x00\x00\x00", 8))) {
-        throw kaitai::validation_not_equal_error<std::string>(std::string("\x00\x00\x00\x00\x00\x00\x00\x00", 8), reserved(), _io(), std::string("/seq/7"));
+        return;
     }
 }
 
@@ -214,7 +214,7 @@ mmd_vmd_t::header_t::header_t(kaitai::kstream* p__io, mmd_vmd_t* p__parent, mmd_
 void mmd_vmd_t::header_t::_read() {
     m_magic = m__io->read_bytes(30);
     if (!(magic() == std::string("\x56\x6F\x63\x61\x6C\x6F\x69\x64\x20\x4D\x6F\x74\x69\x6F\x6E\x20\x44\x61\x74\x61\x20\x30\x30\x30\x32\x00\x00\x00\x00\x00", 30))) {
-        throw kaitai::validation_not_equal_error<std::string>(std::string("\x56\x6F\x63\x61\x6C\x6F\x69\x64\x20\x4D\x6F\x74\x69\x6F\x6E\x20\x44\x61\x74\x61\x20\x30\x30\x30\x32\x00\x00\x00\x00\x00", 30), magic(), _io(), std::string("/types/header/seq/0"));
+       return;
     }
     m_name = kaitai::kstream::bytes_to_str(kaitai::kstream::bytes_terminate(m__io->read_bytes(20), 0, false), std::string("Shift_JIS"));
 }

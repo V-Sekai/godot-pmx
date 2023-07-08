@@ -304,8 +304,9 @@ uint64_t kaitai::kstream::read_bits_int_be(int n) {
         // 8 bits => 1 byte
         // 9 bits => 2 bytes
         int bytes_needed = ((bits_needed - 1) / 8) + 1;
-        if (bytes_needed > 8)
-            throw std::runtime_error("read_bits_int: more than 8 bytes requested");
+        if (bytes_needed > 8) {
+            return 0;
+        }
         char buf[8];
         m_io->read(buf, bytes_needed);
         for (int i = 0; i < bytes_needed; i++) {
@@ -343,8 +344,9 @@ uint64_t kaitai::kstream::read_bits_int_le(int n) {
         // 8 bits => 1 byte
         // 9 bits => 2 bytes
         int bytes_needed = ((bits_needed - 1) / 8) + 1;
-        if (bytes_needed > 8)
-            throw std::runtime_error("read_bits_int_le: more than 8 bytes requested");
+        if (bytes_needed > 8) {
+            return 0;
+        }
         char buf[8];
         m_io->read(buf, bytes_needed);
         for (int i = 0; i < bytes_needed; i++) {
@@ -383,7 +385,7 @@ std::string kaitai::kstream::read_bytes(std::streamsize len) {
     // NOTE: streamsize type is signed, negative values are only *supposed* to not be used.
     // http://en.cppreference.com/w/cpp/io/streamsize
     if (len < 0) {
-        throw std::runtime_error("read_bytes: requested a negative amount");
+        return std::string();    
     }
 
     if (len > 0) {
@@ -416,7 +418,7 @@ std::string kaitai::kstream::read_bytes_term(char term, bool include, bool consu
     if (m_io->eof()) {
         // encountered EOF
         if (eos_error) {
-            throw std::runtime_error("read_bytes_term: encountered EOF");
+            return std::string();
         }
     } else {
         // encountered terminator
@@ -433,7 +435,7 @@ std::string kaitai::kstream::ensure_fixed_contents(std::string expected) {
 
     if (actual != expected) {
         // NOTE: I think printing it outright is not best idea, it could contain non-ascii charactes like backspace and beeps and whatnot. It would be better to print hexlified version, and also to redirect it to stderr.
-        throw std::runtime_error("ensure_fixed_contents: actual data does not match expected data");
+       return std::string();
     }
 
     return actual;
@@ -556,8 +558,9 @@ std::string kaitai::kstream::process_zlib(std::string data) {
 // ========================================================================
 
 int kaitai::kstream::mod(int a, int b) {
-    if (b <= 0)
-        throw std::invalid_argument("mod: divisor b <= 0");
+    if (b <= 0) {
+        return 0;
+    }
     int r = a % b;
     if (r < 0)
         r += b;
