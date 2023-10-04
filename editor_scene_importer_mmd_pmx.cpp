@@ -226,46 +226,80 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		BoneId parent_index = -1;
 		if (is_valid_index(bones->at(bone_i)->parent_index())) {
 			parent_index = bones->at(bone_i)->parent_index()->value();
-			real_t parent_x = bones->at(parent_index)->position()->x() * mmd_unit_conversion;
-			real_t parent_y = bones->at(parent_index)->position()->y() * mmd_unit_conversion;
-			real_t parent_z = bones->at(parent_index)->position()->z() * mmd_unit_conversion;
-			xform.origin -= Vector3(parent_x, parent_y, parent_z);
+			if (parent_index >= 0 && parent_index < int64_t(bone_count)) {
+				real_t parent_x = bones->at(parent_index)->position()->x() * mmd_unit_conversion;
+				real_t parent_y = bones->at(parent_index)->position()->y() * mmd_unit_conversion;
+				real_t parent_z = bones->at(parent_index)->position()->z() * mmd_unit_conversion;
+				xform.origin -= Vector3(parent_x, parent_y, parent_z);
+			}
 		}
 		xform.origin.z = -xform.origin.z;
 		skeleton->set_bone_rest(bone_i, xform);
 		skeleton->set_bone_pose_position(bone_i, xform.origin);
-		skeleton->set_bone_parent(bone_i, parent_index);
+		if (parent_index >= 0 && parent_index < int64_t(bone_count)) {
+			skeleton->set_bone_parent(bone_i, parent_index);
+		}
+	}
+
+	HashMap<String, String> bone_name_map;
+	bone_name_map[String(L"センター")] = "Hips";
+	bone_name_map[String(L"下半身")] = "Spine";
+	bone_name_map[String(L"上半身")] = "Chest";
+
+	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
+		String bone_name = skeleton->get_bone_name(bone_i);
+		HashMap<String, String>::Iterator found_bone = bone_name_map.find(bone_name);
+		if (found_bone) {
+			skeleton->set_bone_name(bone_i, found_bone->value);
+		}
 	}
 
 	BoneId hip_id = skeleton->find_bone("Hips");
 	BoneId spine_id = skeleton->find_bone("Spine");
 	BoneId lower_body_id = skeleton->find_bone("LowerBody");
 
-	Transform3D hip_global_transform = skeleton->get_bone_global_pose(hip_id);
-	Transform3D spine_global_transform = skeleton->get_bone_global_pose(spine_id);
-	Transform3D lower_body_global_transform = skeleton->get_bone_global_pose(lower_body_id);
-
 	skeleton->set_bone_parent(spine_id, hip_id);
 	skeleton->set_bone_parent(lower_body_id, spine_id);
-
-	if (!skeleton->get_bone_name(hip_id).is_empty()) {
-		skeleton->set_bone_pose_position(hip_id, hip_global_transform.origin);
-		skeleton->set_bone_pose_rotation(hip_id, hip_global_transform.basis.get_rotation_quaternion());
-		skeleton->set_bone_pose_scale(hip_id, hip_global_transform.basis.get_scale());
+	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
+		if (skeleton->get_bone_parent(bone_i) == lower_body_id) {
+			skeleton->set_bone_parent(bone_i, hip_id);
+		}
 	}
+	HashMap<String, String> rename_bone_name_map;
+	rename_bone_name_map[L"全ての親"] = "Root";
+	rename_bone_name_map[L"グルーブ"] = "Groove";
+	rename_bone_name_map[L"上半身2"] = "UpperChest";
+	rename_bone_name_map[L"首"] = "Neck";
+	rename_bone_name_map[L"頭"] = "Head";
+	rename_bone_name_map[L"左肩"] = "LeftShoulder";
+	rename_bone_name_map[L"左腕"] = "LeftUpperArm";
+	rename_bone_name_map[L"左ひじ"] = "LeftLowerArm";
+	rename_bone_name_map[L"左手首"] = "LeftHand";
+	rename_bone_name_map[L"右肩"] = "RightShoulder";
+	rename_bone_name_map[L"右腕"] = "RightUpperArm";
+	rename_bone_name_map[L"右ひじ"] = "RightLowerArm";
+	rename_bone_name_map[L"右手首"] = "RightHand";
+	rename_bone_name_map[L"左足"] = "LeftUpperLeg";
+	rename_bone_name_map[L"左ひざ"] = "LeftLowerLeg";
+	rename_bone_name_map[L"左足首"] = "LeftFoot";
+	rename_bone_name_map[L"右足"] = "RightUpperLeg";
+	rename_bone_name_map[L"右ひざ"] = "RightLowerLeg";
+	rename_bone_name_map[L"右足首"] = "RightFoot";
 
-	if (!skeleton->get_bone_name(spine_id).is_empty()) {
-		skeleton->set_bone_pose_position(spine_id, spine_global_transform.origin);
-		skeleton->set_bone_pose_rotation(spine_id, spine_global_transform.basis.get_rotation_quaternion());
-		skeleton->set_bone_pose_scale(spine_id, spine_global_transform.basis.get_scale());
+	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
+		String bone_name = skeleton->get_bone_name(bone_i);
+		HashMap<String, String>::Iterator found_bone = rename_bone_name_map.find(bone_name);
+		if (found_bone) {
+			skeleton->set_bone_name(bone_i, found_bone->value);
+		}
 	}
-
-	if (!skeleton->get_bone_name(lower_body_id).is_empty()) {
-		skeleton->set_bone_pose_position(lower_body_id, lower_body_global_transform.origin);
-		skeleton->set_bone_pose_rotation(lower_body_id, lower_body_global_transform.basis.get_rotation_quaternion());
-		skeleton->set_bone_pose_scale(lower_body_id, lower_body_global_transform.basis.get_scale());
-	}
-
+	BoneId chest_id = skeleton->find_bone("Chest");
+	Transform3D chest_global_pose = skeleton->get_bone_global_pose(chest_id);
+	Transform3D spine_global_pose_inverse = skeleton->get_bone_global_pose(spine_id).affine_inverse();    
+	Transform3D chest_to_spine_pose = spine_global_pose_inverse * chest_global_pose;
+	Transform3D new_chest_rest_pose = chest_to_spine_pose;    
+	skeleton->set_bone_rest(chest_id, new_chest_rest_pose);  
+	skeleton->set_bone_parent(chest_id, spine_id);      
 	root->add_child(skeleton, true);
 	skeleton->set_owner(root);
 
