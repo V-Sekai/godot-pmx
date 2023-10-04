@@ -285,6 +285,46 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	rename_bone_name_map[L"右足"] = "RightUpperLeg";
 	rename_bone_name_map[L"右ひざ"] = "RightLowerLeg";
 	rename_bone_name_map[L"右足首"] = "RightFoot";
+	rename_bone_name_map[L"左目"] = "LeftEye";
+	rename_bone_name_map[L"右目"] = "RightEye";
+	rename_bone_name_map[L"左足先"] = "LeftToes";
+	rename_bone_name_map[L"右足先"] = "RightToes";
+
+	rename_bone_name_map[L"左親指０"] = "LeftThumbProximal";
+	rename_bone_name_map[L"左親指１"] = "LeftThumbIntermediate";
+	rename_bone_name_map[L"左親指２"] = "LeftThumbDistal";
+
+	rename_bone_name_map[L"右親指０"] = "RightThumbProximal";
+	rename_bone_name_map[L"右親指１"] = "RightThumbIntermediate";
+	rename_bone_name_map[L"右親指２"] = "RightThumbDistal";
+
+	rename_bone_name_map[L"左人指１"] = "LeftIndexProximal";
+	rename_bone_name_map[L"左人指２"] = "LeftIndexIntermediate";
+	rename_bone_name_map[L"左人指３"] = "LeftIndexDistal";
+	rename_bone_name_map[L"右人指１"] = "RightIndexProximal";
+	rename_bone_name_map[L"右人指２"] = "RightIndexIntermediate";
+	rename_bone_name_map[L"右人指３"] = "RightIndexDistal";
+
+	rename_bone_name_map[L"左中指１"] = "LeftMiddleProximal";
+	rename_bone_name_map[L"左中指２"] = "LeftMiddleIntermediate";
+	rename_bone_name_map[L"左中指３"] = "LeftMiddleDistal";
+	rename_bone_name_map[L"右中指１"] = "RightMiddleProximal";
+	rename_bone_name_map[L"右中指２"] = "RightMiddleIntermediate";
+	rename_bone_name_map[L"右中指３"] = "RightMiddleDistal";
+
+	rename_bone_name_map[L"左薬指１"] = "LeftRingProximal";
+	rename_bone_name_map[L"左薬指２"] = "LeftRingIntermediate";
+	rename_bone_name_map[L"左薬指３"] = "LeftRingDistal";
+	rename_bone_name_map[L"右薬指１"] = "RightRingProximal";
+	rename_bone_name_map[L"右薬指２"] = "RightRingIntermediate";
+	rename_bone_name_map[L"右薬指３"] = "RightRingDistal";
+
+	rename_bone_name_map[L"左小指１"] = "LeftLittleProximal";
+	rename_bone_name_map[L"左小指２"] = "LeftLittleIntermediate";
+	rename_bone_name_map[L"左小指３"] = "LeftLittleDistal";
+	rename_bone_name_map[L"右小指１"] = "RightLittleProximal";
+	rename_bone_name_map[L"右小指２"] = "RightLittleIntermediate";
+	rename_bone_name_map[L"右小指３"] = "RightLittleDistal";
 
 	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
 		String bone_name = skeleton->get_bone_name(bone_i);
