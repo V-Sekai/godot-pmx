@@ -32,6 +32,7 @@
 #define EDITOR_SCENE_IMPORTER_MMD_PMX_H
 
 #include "editor/import/resource_importer_scene.h"
+#include "scene/3d/skeleton_3d.h"
 #include "scene/main/node.h"
 #include "scene/resources/packed_scene.h"
 #include "scene/resources/surface_tool.h"
@@ -50,6 +51,14 @@ class EditorSceneImporterMMDPMX : public EditorSceneFormatImporter {
 	String convert_string(const std::string &s, uint8_t encoding) const;
 	virtual Node *import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state = Ref<PMXMMDState>());
 	String find_file_case_insensitive_recursive(const String &target, const String &path);
+	void set_bone_rest_and_parent(Skeleton3D *skeleton, int32_t bone_id, int32_t parent_id) {
+		Transform3D bone_global_pose = skeleton->get_bone_global_pose(bone_id);
+		Transform3D parent_global_pose_inverse = skeleton->get_bone_global_pose(parent_id).affine_inverse();
+		Transform3D new_bone_rest_pose = parent_global_pose_inverse * bone_global_pose;
+
+		skeleton->set_bone_rest(bone_id, new_bone_rest_pose);
+		skeleton->set_bone_parent(bone_id, parent_id);
+	}
 
 public:
 	virtual uint32_t get_import_flags() const override;

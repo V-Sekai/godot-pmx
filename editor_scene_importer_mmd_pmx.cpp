@@ -241,30 +241,6 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		}
 	}
 
-	HashMap<String, String> bone_name_map;
-	bone_name_map[String(L"センター")] = "Hips";
-	bone_name_map[String(L"下半身")] = "Spine";
-	bone_name_map[String(L"上半身")] = "Chest";
-
-	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		String bone_name = skeleton->get_bone_name(bone_i);
-		HashMap<String, String>::Iterator found_bone = bone_name_map.find(bone_name);
-		if (found_bone) {
-			skeleton->set_bone_name(bone_i, found_bone->value);
-		}
-	}
-
-	BoneId hip_id = skeleton->find_bone("Hips");
-	BoneId spine_id = skeleton->find_bone("Spine");
-	BoneId lower_body_id = skeleton->find_bone("LowerBody");
-
-	skeleton->set_bone_parent(spine_id, hip_id);
-	skeleton->set_bone_parent(lower_body_id, spine_id);
-	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		if (skeleton->get_bone_parent(bone_i) == lower_body_id) {
-			skeleton->set_bone_parent(bone_i, hip_id);
-		}
-	}
 	HashMap<String, String> rename_bone_name_map;
 	rename_bone_name_map[L"全ての親"] = "Root";
 	rename_bone_name_map[L"グルーブ"] = "Groove";
@@ -326,20 +302,7 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	rename_bone_name_map[L"右小指２"] = "RightLittleIntermediate";
 	rename_bone_name_map[L"右小指３"] = "RightLittleDistal";
 
-	for (uint32_t bone_i = 0; bone_i < bone_count; bone_i++) {
-		String bone_name = skeleton->get_bone_name(bone_i);
-		HashMap<String, String>::Iterator found_bone = rename_bone_name_map.find(bone_name);
-		if (found_bone) {
-			skeleton->set_bone_name(bone_i, found_bone->value);
-		}
-	}
-	BoneId chest_id = skeleton->find_bone("Chest");
-	Transform3D chest_global_pose = skeleton->get_bone_global_pose(chest_id);
-	Transform3D spine_global_pose_inverse = skeleton->get_bone_global_pose(spine_id).affine_inverse();    
-	Transform3D chest_to_spine_pose = spine_global_pose_inverse * chest_global_pose;
-	Transform3D new_chest_rest_pose = chest_to_spine_pose;    
-	skeleton->set_bone_rest(chest_id, new_chest_rest_pose);  
-	skeleton->set_bone_parent(chest_id, spine_id);      
+	skeleton->set_bone_name(skeleton->find_bone(String(L"センター")), "Root");
 	root->add_child(skeleton, true);
 	skeleton->set_owner(root);
 
