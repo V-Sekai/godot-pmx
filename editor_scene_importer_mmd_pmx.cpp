@@ -290,12 +290,12 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	rename_bone_name_map[L"左足先"] = "LeftToes";
 	rename_bone_name_map[L"右足先"] = "RightToes";
 
-	rename_bone_name_map[L"左親指０"] = "LeftThumbProximal";
-	rename_bone_name_map[L"左親指１"] = "LeftThumbIntermediate";
+	rename_bone_name_map[L"左親指０"] = "LeftThumbMetacarpal";
+	rename_bone_name_map[L"左親指１"] = "LeftThumbProximal";
 	rename_bone_name_map[L"左親指２"] = "LeftThumbDistal";
 
-	rename_bone_name_map[L"右親指０"] = "RightThumbProximal";
-	rename_bone_name_map[L"右親指１"] = "RightThumbIntermediate";
+	rename_bone_name_map[L"右親指０"] = "RightThumbMetacarpal";
+	rename_bone_name_map[L"右親指１"] = "RightThumbProximal";
 	rename_bone_name_map[L"右親指２"] = "RightThumbDistal";
 
 	rename_bone_name_map[L"左人指１"] = "LeftIndexProximal";
