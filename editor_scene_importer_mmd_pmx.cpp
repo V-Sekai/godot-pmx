@@ -268,24 +268,17 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		texture_cache.write[texture_cache_i] = base_color_tex;
 	}
 
-	Vector<Ref<Material>> material_cache;
+	Vector<Ref<StandardMaterial3D>> material_cache;
 	material_cache.resize(pmx.material_count());
 	for (uint32_t material_cache_i = 0; material_cache_i < pmx.material_count(); material_cache_i++) {
-		Ref<ShaderMaterial> material = memnew(ShaderMaterial);
-		material->set_shader(pmx_toon_shader);
+		Ref<StandardMaterial3D> material;
+		material.instantiate();
 		int32_t texture_index = materials->at(material_cache_i)->texture_index()->value();
 		if (is_valid_index(materials->at(material_cache_i)->texture_index()) && texture_index < texture_cache.size() && !texture_cache[texture_index].is_null()) {
-			material->set_shader_parameter("albedo_texture", texture_cache[texture_index]);
+			material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture_cache[texture_index]);
 		}
 		mmd_pmx_t::color4_t *diffuse = materials->at(material_cache_i)->diffuse();
-		material->set_shader_parameter("albedo", Color(diffuse->r(), diffuse->g(), diffuse->b(), diffuse->a()));
-		float specular_shininess = materials->at(material_cache_i)->shininess();
-    	material->set_shader_parameter("specular_shininess", specular_shininess);
-		float rim_width = materials->at(material_cache_i)->edge_size();
-    	material->set_shader_parameter("rim_width", rim_width);
-		mmd_pmx_t::color4_t *rim_color = materials->at(material_cache_i)->edge_color();
-   		material->set_shader_parameter("rim_color", Color(rim_color->r(), rim_color->g(), rim_color->b()));
-
+		material->set_albedo(Color(diffuse->r(), diffuse->g(), diffuse->b(), diffuse->a()));
 		String material_name = convert_string(materials->at(material_cache_i)->name()->value(), pmx.header()->encoding());
 		material->set_name(material_name);
 		material_cache.write[material_cache_i] = material;

@@ -38,7 +38,6 @@
 #include "scene/resources/surface_tool.h"
 
 #include "thirdparty/ksy/mmd_pmx.h"
-#include "pmx_toon_shader.h"
 
 class Animation;
 class PMXMMDState;
@@ -52,17 +51,13 @@ class EditorSceneImporterMMDPMX : public EditorSceneFormatImporter {
 	String convert_string(const std::string &s, uint8_t encoding) const;
 	virtual Node *import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state = Ref<PMXMMDState>());
 	String find_file_case_insensitive_recursive(const String &target, const String &path);
-	Ref<Shader> pmx_toon_shader;
+
 public:
 	virtual uint32_t get_import_flags() const override;
 	virtual void get_extensions(List<String> *r_extensions) const override;
 	virtual Node *import_scene(const String &p_path, uint32_t p_flags, const HashMap<StringName, Variant> &p_options,
 			List<String> *r_missing_deps = nullptr,
 			Error *r_err = nullptr) override;
-	EditorSceneImporterMMDPMX() {
-		pmx_toon_shader.instantiate();
-		pmx_toon_shader->set_code(pmx_toon_shader_code);
-	}
 };
 
 class PMXMMDState : public Resource {
