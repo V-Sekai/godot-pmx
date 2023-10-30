@@ -258,14 +258,10 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		texture_path = p_path.get_base_dir() + "/" + texture_path;
 		print_verbose(vformat("Found texture %s", texture_path));
 
-		Ref<Texture2D> base_color_tex = ResourceLoader::load(texture_path, "Texture2D");
-
-		// If the texture is not found, try loading it with a case-insensitive search.
-		if (base_color_tex.is_null()) {
-			String found_file = find_file_case_insensitive_recursive(texture_path.get_file(), texture_path.get_base_dir());
-			if (!found_file.is_empty()) {
-				base_color_tex = ResourceLoader::load(found_file, "Texture2D");
-			}
+		Ref<Texture2D> base_color_tex;
+		String found_file = find_file_case_insensitive_recursive(texture_path.get_file(), texture_path.get_base_dir());
+		if (!found_file.is_empty()) {
+			base_color_tex = ResourceLoader::load(found_file, "Texture2D");
 		}
 
 		ERR_CONTINUE_MSG(base_color_tex.is_null(), vformat("Can't load texture: %s", texture_path));
