@@ -279,6 +279,10 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		}
 		mmd_pmx_t::color4_t *diffuse = materials->at(material_cache_i)->diffuse();
 		material->set_shader_parameter("albedo", Color(diffuse->r(), diffuse->g(), diffuse->b(), diffuse->a()));
+
+		float specular_strength = materials->at(material_cache_i)->specular_strength();
+    	material->set_shader_parameter("specular_strength", specular_strength);
+
 		float specular_shininess = materials->at(material_cache_i)->shininess();
     	material->set_shader_parameter("specular_shininess", specular_shininess);
 		float rim_width = materials->at(material_cache_i)->edge_size();
