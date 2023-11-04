@@ -241,6 +241,12 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 			skeleton->set_bone_parent(bone_i, parent_index);
 		}
 	}
+	skeleton->set_bone_name(skeleton->find_bone(String(L"センター")), "Root");
+	BoneId hips_id = skeleton->find_bone(String(L"下半身"));
+	skeleton->set_bone_name(hips_id, "Hips");
+	BoneId spine_id = skeleton->find_bone(String(L"上半身"));
+	skeleton->set_bone_name(spine_id, "Spine");
+	set_bone_rest_and_parent(skeleton, spine_id, hips_id);
 
 	root->add_child(skeleton, true);
 	skeleton->set_owner(root);
