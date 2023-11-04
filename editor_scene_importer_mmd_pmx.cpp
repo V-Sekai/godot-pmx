@@ -183,7 +183,7 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t
 
 String EditorSceneImporterMMDPMX::convert_string(const std::string &p_string, uint8_t p_encoding) const {
 	String output;
-	if (p_encoding == 0) {
+	if (!p_encoding) {
 		Vector<char16_t> buf;
 		buf.resize(p_string.length() / 2);
 		memcpy(buf.ptrw(), p_string.c_str(), p_string.length() / 2 * sizeof(char16_t));
@@ -195,7 +195,7 @@ String EditorSceneImporterMMDPMX::convert_string(const std::string &p_string, ui
 }
 
 Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state) {
-	if (r_state == Ref<PMXMMDState>()) {
+	if (r_state.is_null()) {
 		r_state.instantiate();
 	}
 	std::ifstream ifs(
