@@ -376,6 +376,15 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	return root;
 }
 
+void EditorSceneImporterMMDPMX::set_bone_rest_and_parent(Skeleton3D *skeleton, int32_t bone_id, int32_t parent_id) {
+	Transform3D bone_global_pose = skeleton->get_bone_global_pose(bone_id);
+	Transform3D parent_global_pose_inverse = skeleton->get_bone_global_pose(parent_id).affine_inverse();
+	Transform3D new_bone_rest_pose = parent_global_pose_inverse * bone_global_pose;
+
+	skeleton->set_bone_rest(bone_id, new_bone_rest_pose);
+	skeleton->set_bone_parent(bone_id, parent_id);
+}
+
 String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const String &target, const String &path) {
 	String new_path = path.simplify_path();
 	Ref<DirAccess> dir = DirAccess::create(DirAccess::ACCESS_RESOURCES);
