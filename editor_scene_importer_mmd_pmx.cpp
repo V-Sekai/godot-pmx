@@ -371,17 +371,17 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	return root;
 }
 
-void EditorSceneImporterMMDPMX::set_bone_rest_and_parent(Skeleton3D *skeleton, int32_t bone_id, int32_t parent_id) {
-	Transform3D bone_global_pose = skeleton->get_bone_global_pose(bone_id);
-	Transform3D parent_global_pose_inverse = skeleton->get_bone_global_pose(parent_id).affine_inverse();
+void EditorSceneImporterMMDPMX::set_bone_rest_and_parent(Skeleton3D *p_skeleton, int32_t p_bone_id, int32_t p_parent_id) {
+	Transform3D bone_global_pose = p_skeleton->get_bone_global_pose(p_bone_id);
+	Transform3D parent_global_pose_inverse = p_skeleton->get_bone_global_pose(p_parent_id).affine_inverse();
 	Transform3D new_bone_rest_pose = parent_global_pose_inverse * bone_global_pose;
 
-	skeleton->set_bone_rest(bone_id, new_bone_rest_pose);
-	skeleton->set_bone_parent(bone_id, parent_id);
+	p_skeleton->set_bone_rest(p_bone_id, new_bone_rest_pose);
+	p_skeleton->set_bone_parent(p_bone_id, p_parent_id);
 }
 
-String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const String &target, const String &path) {
-	String new_path = path.simplify_path();
+String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const String &p_target, const String &p_path) {
+	String new_path = p_path.simplify_path();
 	Ref<DirAccess> dir = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 	Error err = dir->change_dir(new_path);
 	if (err != OK) {
@@ -389,14 +389,14 @@ String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const Str
 		return String();
 	}
 
-	String target_lower = target.to_lower();
+	String target_lower = p_target.to_lower();
 	dir->list_dir_begin();
 	String file_name = dir->get_next();
 	while (!file_name.is_empty()) {
 		if (dir->current_is_dir() && file_name != "." && file_name != "..") {
 			// Recursively search in subdirectories.
 			String sub_path = new_path + "/" + file_name;
-			String found_file = find_file_case_insensitive_recursive(target, sub_path);
+			String found_file = find_file_case_insensitive_recursive(p_target, sub_path);
 			if (!found_file.is_empty()) {
 				dir->list_dir_end();
 				return found_file;
