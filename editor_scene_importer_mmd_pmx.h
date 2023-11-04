@@ -40,6 +40,7 @@
 #include "thirdparty/ksy/mmd_pmx.h"
 
 class Animation;
+class PMXMMDState;
 
 class EditorSceneImporterMMDPMX : public EditorSceneFormatImporter {
 	GDCLASS(EditorSceneImporterMMDPMX, EditorSceneFormatImporter);
@@ -48,7 +49,7 @@ class EditorSceneImporterMMDPMX : public EditorSceneFormatImporter {
 	void add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t::vertex_t *r_vertex) const;
 	bool is_valid_index(mmd_pmx_t::sized_index_t *p_index) const;
 	String convert_string(const std::string &p_string, uint8_t p_encoding) const;
-	virtual Node *import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps);
+	virtual Node *import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state);
 	String find_file_case_insensitive_recursive(const String &p_target, const String &p_path);
 	void set_bone_rest_and_parent(Skeleton3D *p_skeleton, int32_t p_bone_id, int32_t p_parent_id);
 
@@ -58,6 +59,10 @@ public:
 	virtual Node *import_scene(const String &p_path, uint32_t p_flags, const HashMap<StringName, Variant> &p_options,
 			List<String> *r_missing_deps = nullptr,
 			Error *r_err = nullptr) override;
+};
+
+class PMXMMDState : public Resource {
+	GDCLASS(PMXMMDState, Resource);
 };
 
 #endif // EDITOR_SCENE_IMPORTER_MMD_PMX_H

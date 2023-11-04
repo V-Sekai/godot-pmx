@@ -57,6 +57,7 @@ void initialize_pmx_module(ModuleInitializationLevel p_level) {
 	ClassDB::set_current_api(prev_api);
 	EditorNode::add_init_callback(_editor_init);
 #endif
+	GDREGISTER_CLASS(PMXMMDState);
 #endif
 }
 

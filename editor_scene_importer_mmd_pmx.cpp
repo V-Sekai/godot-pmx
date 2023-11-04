@@ -61,7 +61,9 @@ void EditorSceneImporterMMDPMX::get_extensions(List<String> *r_extensions) const
 }
 
 Node *EditorSceneImporterMMDPMX::import_scene(const String &p_path, uint32_t p_flags, const HashMap<StringName, Variant> &p_options, List<String> *r_missing_deps, Error *r_err) {
-	return import_mmd_pmx_scene(p_path, p_flags, (float)p_options["animation/fps"]);
+	Ref<PMXMMDState> state;
+	state.instantiate();
+	return import_mmd_pmx_scene(p_path, p_flags, (float)p_options["animation/fps"], state);
 }
 
 bool EditorSceneImporterMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *p_index) const {
@@ -192,7 +194,10 @@ String EditorSceneImporterMMDPMX::convert_string(const std::string &p_string, ui
 	return output;
 }
 
-Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps) {
+Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state) {
+	if (r_state == Ref<PMXMMDState>()) {
+		r_state.instantiate();
+	}
 	std::ifstream ifs(
 			ProjectSettings::get_singleton()->globalize_path(p_path).utf8().get_data(), std::ifstream::binary);
 	kaitai::kstream ks(&ifs);
