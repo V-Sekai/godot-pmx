@@ -40,7 +40,7 @@
 static void _editor_init() {
 	Ref<EditorSceneImporterMMDPMX> import_pmx;
 	import_pmx.instantiate();
-	ResourceImporterScene::add_importer(import_pmx);
+	ResourceImporterScene::add_scene_importer(import_pmx);
 }
 #endif
 #endif
