@@ -31,10 +31,9 @@
 #ifndef EDITOR_SCENE_IMPORTER_MMD_PMX_H
 #define EDITOR_SCENE_IMPORTER_MMD_PMX_H
 
-#include "editor/import/resource_importer_scene.h"
+#include "editor/import/3d/resource_importer_scene.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/main/node.h"
-#include "scene/resources/packed_scene.h"
 #include "scene/resources/surface_tool.h"
 
 #include "thirdparty/ksy/mmd_pmx.h"

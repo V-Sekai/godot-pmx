@@ -32,7 +32,7 @@
 
 #include "core/object/class_db.h"
 #include "editor/editor_node.h"
-#include "editor/import/resource_importer_scene.h"
+#include "editor/import/3d/resource_importer_scene.h"
 #include "editor_scene_importer_mmd_pmx.h"
 
 #ifndef _3D_DISABLED
