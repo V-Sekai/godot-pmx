@@ -34,6 +34,7 @@
 #include "core/core_bind.h"
 #include "core/io/dir_access.h"
 #include "core/string/print_string.h"
+#include "core/templates/hash_map.h"
 #include "core/templates/local_vector.h"
 #include "core/templates/pair.h"
 #include "scene/3d/importer_mesh_instance_3d.h"
@@ -183,13 +184,20 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t
 
 String EditorSceneImporterMMDPMX::convert_string(const std::string &p_string, uint8_t p_encoding) const {
 	String output;
-	if (!p_encoding) {
+	if (!p_encoding && !p_string.empty()) {
 		Vector<char16_t> buf;
-		buf.resize(p_string.length() / 2);
-		memcpy(buf.ptrw(), p_string.c_str(), p_string.length() / 2 * sizeof(char16_t));
-		output.parse_utf16(buf.ptr(), buf.size());
-	} else {
-		output.parse_utf8(p_string.data(), p_string.length());
+		size_t str_len = p_string.size();
+		buf.resize(str_len / 2);
+		const char *str_data = p_string.c_str();
+		if (str_data != nullptr) {
+			memcpy(buf.ptrw(), str_data, str_len / 2 * sizeof(char16_t));
+			output.parse_utf16(buf.ptr(), buf.size());
+		}
+	} else if (!p_string.empty()) {
+		const char *str_data = p_string.data();
+		if (str_data != nullptr) {
+			output.parse_utf8(str_data, p_string.size());
+		}
 	}
 	return output;
 }
@@ -241,13 +249,31 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 			skeleton->set_bone_parent(bone_i, parent_index);
 		}
 	}
-	skeleton->set_bone_name(skeleton->find_bone(String(L"センター")), "Root");
-	BoneId hips_id = skeleton->find_bone(String(L"下半身"));
-	skeleton->set_bone_name(hips_id, "Hips");
-	BoneId spine_id = skeleton->find_bone(String(L"上半身"));
-	skeleton->set_bone_name(spine_id, "Spine");
-	set_bone_rest_and_parent(skeleton, spine_id, hips_id);
+	translate_bones(skeleton);
+	BoneId root_id = skeleton->find_bone(String("ParentNode"));
+	if (root_id != -1) {
+		skeleton->set_bone_name(root_id, "Root");
+		BoneId hips_id = skeleton->find_bone(String("Waist"));
+		if (hips_id != -1) {
+			skeleton->set_bone_name(hips_id, "Hips");
 
+			BoneId spine_id = skeleton->find_bone(String("Groove"));
+			if (spine_id != -1) {
+				skeleton->set_bone_name(spine_id, "Spine");
+				set_bone_rest_and_parent(skeleton, spine_id, hips_id);
+
+				BoneId chest_id = skeleton->find_bone(String("UpperBody"));
+				if (chest_id != -1) {
+					skeleton->set_bone_name(chest_id, "Chest");
+					set_bone_rest_and_parent(skeleton, chest_id, spine_id);
+				}
+			} 
+			BoneId lower_body_id = skeleton->find_bone(String("LowerBody"));
+			if (lower_body_id != -1) {
+				set_bone_rest_and_parent(skeleton, lower_body_id, hips_id);
+			}
+		}
+	}
 	root->add_child(skeleton, true);
 	skeleton->set_owner(root);
 
@@ -377,6 +403,7 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 }
 
 void EditorSceneImporterMMDPMX::set_bone_rest_and_parent(Skeleton3D *p_skeleton, int32_t p_bone_id, int32_t p_parent_id) {
+	ERR_FAIL_NULL(p_skeleton);
 	Transform3D bone_global_pose = p_skeleton->get_bone_global_pose(p_bone_id);
 	Transform3D parent_global_pose_inverse = p_skeleton->get_bone_global_pose(p_parent_id).affine_inverse();
 	Transform3D new_bone_rest_pose = parent_global_pose_inverse * bone_global_pose;
@@ -418,4 +445,135 @@ String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const Str
 	// File not found.
 	dir->list_dir_end();
 	return String();
+}
+
+void EditorSceneImporterMMDPMX::translate_bones(Skeleton3D *p_skeleton) {
+	ERR_FAIL_NULL(p_skeleton);
+	HashMap<String, String> japanese_to_english;
+	japanese_to_english.insert("全ての親", "ParentNode");
+	japanese_to_english.insert("操作中心", "ControlNode");
+	japanese_to_english.insert("センター", "Center");
+	japanese_to_english.insert("ｾﾝﾀｰ", "Center");
+	japanese_to_english.insert("グループ", "Group");
+	japanese_to_english.insert("グルーブ", "Groove");
+	japanese_to_english.insert("キャンセル", "Cancel");
+	japanese_to_english.insert("上半身", "UpperBody");
+	japanese_to_english.insert("下半身", "LowerBody");
+	japanese_to_english.insert("手首", "Wrist");
+	japanese_to_english.insert("足首", "Ankle");
+	japanese_to_english.insert("首", "Neck");
+	japanese_to_english.insert("頭", "Head");
+	japanese_to_english.insert("顔", "Face");
+	japanese_to_english.insert("下顎", "Chin");
+	japanese_to_english.insert("下あご", "Chin");
+	japanese_to_english.insert("あご", "Jaw");
+	japanese_to_english.insert("顎", "Jaw");
+	japanese_to_english.insert("両目", "Eyes");
+	japanese_to_english.insert("目", "Eye");
+	japanese_to_english.insert("眉", "Eyebrow");
+	japanese_to_english.insert("舌", "Tongue");
+	japanese_to_english.insert("涙", "Tears");
+	japanese_to_english.insert("泣き", "Cry");
+	japanese_to_english.insert("歯", "Teeth");
+	japanese_to_english.insert("照れ", "Blush");
+	japanese_to_english.insert("青ざめ", "Pale");
+	japanese_to_english.insert("ガーン", "Gloom");
+	japanese_to_english.insert("汗", "Sweat");
+	japanese_to_english.insert("怒", "Anger");
+	japanese_to_english.insert("感情", "Emotion");
+	japanese_to_english.insert("腰", "Waist");
+	japanese_to_english.insert("髪", "Hair");
+	japanese_to_english.insert("三つ編み", "Braid");
+	japanese_to_english.insert("胸", "Breast");
+	japanese_to_english.insert("乳", "Boob");
+	japanese_to_english.insert("おっぱい", "Tits");
+	japanese_to_english.insert("筋", "Muscle");
+	japanese_to_english.insert("腹", "Belly");
+	japanese_to_english.insert("鎖骨", "Clavicle");
+	japanese_to_english.insert("肩", "Shoulder");
+	japanese_to_english.insert("腕", "Arm");
+	japanese_to_english.insert("うで", "Arm");
+	japanese_to_english.insert("ひじ", "Elbow");
+	japanese_to_english.insert("肘", "Elbow");
+	japanese_to_english.insert("手", "Hand");
+	japanese_to_english.insert("親指", "Thumb");
+	japanese_to_english.insert("人指", "IndexFinger");
+	japanese_to_english.insert("人差指", "IndexFinger");
+	japanese_to_english.insert("中指", "MiddleFinger");
+	japanese_to_english.insert("薬指", "RingFinger");
+	japanese_to_english.insert("小指", "LittleFinger");
+	japanese_to_english.insert("足", "Leg");
+	japanese_to_english.insert("ひざ", "Knee");
+	japanese_to_english.insert("つま", "Toe");
+	japanese_to_english.insert("袖", "Sleeve");
+	japanese_to_english.insert("新規", "New");
+	japanese_to_english.insert("ボーン", "Bone");
+	japanese_to_english.insert("捩", "Twist");
+	japanese_to_english.insert("回転", "Rotation");
+	japanese_to_english.insert("軸", "Axis");
+	japanese_to_english.insert("ﾈｸﾀｲ", "Necktie");
+	japanese_to_english.insert("ネクタイ", "Necktie");
+	japanese_to_english.insert("ヘッドセット", "Headset");
+	japanese_to_english.insert("飾り", "Accessory");
+	japanese_to_english.insert("リボン", "Ribbon");
+	japanese_to_english.insert("襟", "Collar");
+	japanese_to_english.insert("紐", "String");
+	japanese_to_english.insert("コード", "Cord");
+	japanese_to_english.insert("イヤリング", "Earring");
+	japanese_to_english.insert("メガネ", "Eyeglasses");
+	japanese_to_english.insert("眼鏡", "Glasses");
+	japanese_to_english.insert("帽子", "Hat");
+	japanese_to_english.insert("ｽｶｰﾄ", "Skirt");
+	japanese_to_english.insert("スカート", "Skirt");
+	japanese_to_english.insert("パンツ", "Pantsu");
+	japanese_to_english.insert("シャツ", "Shirt");
+	japanese_to_english.insert("フリル", "Frill");
+	japanese_to_english.insert("マフラー", "Muffler");
+	japanese_to_english.insert("ﾏﾌﾗｰ", "Muffler");
+	japanese_to_english.insert("服", "Clothes");
+	japanese_to_english.insert("ブーツ", "Boots");
+	japanese_to_english.insert("ねこみみ", "CatEars");
+	japanese_to_english.insert("ジップ", "Zip");
+	japanese_to_english.insert("ｼﾞｯﾌﾟ", "Zip");
+	japanese_to_english.insert("ダミー", "Dummy");
+	japanese_to_english.insert("ﾀﾞﾐｰ", "Dummy");
+	japanese_to_english.insert("基", "Category");
+	japanese_to_english.insert("あほ毛", "Antenna");
+	japanese_to_english.insert("アホ毛", "Antenna");
+	japanese_to_english.insert("モミアゲ", "Sideburn");
+	japanese_to_english.insert("もみあげ", "Sideburn");
+	japanese_to_english.insert("ツインテ", "Twintail");
+	japanese_to_english.insert("おさげ", "Pigtail");
+	japanese_to_english.insert("ひらひら", "Flutter");
+	japanese_to_english.insert("調整", "Adjustment");
+	japanese_to_english.insert("補助", "Aux");
+	japanese_to_english.insert("右", "Right");
+	japanese_to_english.insert("左", "Left");
+	japanese_to_english.insert("前", "Front");
+	japanese_to_english.insert("後ろ", "Behind");
+	japanese_to_english.insert("後", "Back");
+	japanese_to_english.insert("横", "Side");
+	japanese_to_english.insert("中", "Middle");
+	japanese_to_english.insert("上", "Upper");
+	japanese_to_english.insert("下", "Lower");
+	japanese_to_english.insert("親", "Parent");
+	japanese_to_english.insert("先", "Tip");
+	japanese_to_english.insert("パーツ", "Part");
+	japanese_to_english.insert("光", "Light");
+	japanese_to_english.insert("戻", "Return");
+	japanese_to_english.insert("羽", "Wing");
+	japanese_to_english.insert("根", "Base");
+	japanese_to_english.insert("毛", "Strand");
+	japanese_to_english.insert("尾", "Tail");
+	japanese_to_english.insert("尻", "Butt");
+
+	for (int i = 0; i < p_skeleton->get_bone_count(); ++i) {
+		String bone_name = p_skeleton->get_bone_name(i);
+		for (const KeyValue<String, String> &E : japanese_to_english) {
+			if (bone_name.find(String(E.key)) != -1) {
+				bone_name = bone_name.replace(E.key, E.value);
+			}
+		}
+		p_skeleton->set_bone_name(i, bone_name);
+	}
 }
