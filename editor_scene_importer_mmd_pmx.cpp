@@ -241,12 +241,19 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 			skeleton->set_bone_parent(bone_i, parent_index);
 		}
 	}
-	skeleton->set_bone_name(skeleton->find_bone(String(L"センター")), "Root");
-	BoneId hips_id = skeleton->find_bone(String(L"下半身"));
-	skeleton->set_bone_name(hips_id, "Hips");
-	BoneId spine_id = skeleton->find_bone(String(L"上半身"));
-	skeleton->set_bone_name(spine_id, "Spine");
-	set_bone_rest_and_parent(skeleton, spine_id, hips_id);
+	BoneId root_id = skeleton->find_bone(String(L"センター"));
+	if (root_id != -1) {
+		skeleton->set_bone_name(root_id, "Root");
+		BoneId hips_id = skeleton->find_bone(String(L"下半身"));
+		if (hips_id != -1) {
+			skeleton->set_bone_name(hips_id, "Hips");
+			BoneId spine_id = skeleton->find_bone(String(L"上半身"));
+			if (spine_id != -1) {
+				skeleton->set_bone_name(spine_id, "Spine");
+				set_bone_rest_and_parent(skeleton, spine_id, hips_id);
+			}
+		}
+	}
 
 	root->add_child(skeleton, true);
 	skeleton->set_owner(root);
@@ -377,6 +384,7 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 }
 
 void EditorSceneImporterMMDPMX::set_bone_rest_and_parent(Skeleton3D *p_skeleton, int32_t p_bone_id, int32_t p_parent_id) {
+	ERR_FAIL_NULL(p_skeleton);
 	Transform3D bone_global_pose = p_skeleton->get_bone_global_pose(p_bone_id);
 	Transform3D parent_global_pose_inverse = p_skeleton->get_bone_global_pose(p_parent_id).affine_inverse();
 	Transform3D new_bone_rest_pose = parent_global_pose_inverse * bone_global_pose;
