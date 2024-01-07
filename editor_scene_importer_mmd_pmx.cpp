@@ -81,7 +81,7 @@ bool EditorSceneImporterMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *p_index
 	}
 }
 
-void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t::vertex_t *r_vertex) const {
+void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t::vertex_t *r_vertex, BoneId p_unused_bone) const {
 	ERR_FAIL_NULL(p_surface);
 	ERR_FAIL_NULL(r_vertex);
 	ERR_FAIL_NULL(r_vertex->normal());
@@ -100,10 +100,10 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t
 			r_vertex->position()->z() * mmd_unit_conversion);
 	point.z = -point.z;
 	PackedInt32Array bones;
-	bones.push_back(0);
-	bones.push_back(0);
-	bones.push_back(0);
-	bones.push_back(0);
+	bones.push_back(p_unused_bone);
+	bones.push_back(p_unused_bone);
+	bones.push_back(p_unused_bone);
+	bones.push_back(p_unused_bone);
 	PackedFloat32Array weights;
 	weights.push_back(0.0f);
 	weights.push_back(0.0f);
@@ -133,25 +133,40 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t
 			case mmd_pmx_t::BONE_TYPE_BDEF4: {
 				mmd_pmx_t::bdef4_weights_t *pmx_weights = (mmd_pmx_t::bdef4_weights_t *)r_vertex->skin_weights();
 				ERR_FAIL_NULL(pmx_weights);
-				for (uint32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
+				for (uint32_t count = 0; count < 4; count++) {
 					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
 						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
 						weights.write[count] = pmx_weights->weights()->at(count);
 					}
 				}
 			} break;
-			case mmd_pmx_t::BONE_TYPE_SDEF:
-			case mmd_pmx_t::BONE_TYPE_QDEF:
-			default: {
+			case mmd_pmx_t::BONE_TYPE_SDEF: {
+				// SDEF is similar to BDEF2 but with additional parameters for C, R0, and R1 which are not handled here.
+				mmd_pmx_t::sdef_weights_t *pmx_weights = static_cast<mmd_pmx_t::sdef_weights_t *>(r_vertex->skin_weights());
+				for (uint32_t count = 0; count < 2; count++) {
+					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
+						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
+						weights.write[count] = pmx_weights->weights()->at(count);
+					}
+				}
+			} break;
+			case mmd_pmx_t::BONE_TYPE_QDEF: {
+				// // QDEF handling could differ and may need special processing not shown here.
+				// mmd_pmx_t::qdef_weights_t *pmx_weights = static_cast<mmd_pmx_t::qdef_weights_t *>(r_vertex->skin_weights());
+				// for (uint32_t count = 0; count < 4; count++) {
+				// 	if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
+				// 		bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
+				// 		weights.write[count] = pmx_weights->weights()->at(count);
+				// 	}
+				// }
 			} break;
 		}
 		p_surface->set_bones(bones);
 		real_t renorm = weights[0] + weights[1] + weights[2] + weights[3];
-		if (renorm != 0.0 && renorm != 1.0) {
-			weights.write[0] /= renorm;
-			weights.write[1] /= renorm;
-			weights.write[2] /= renorm;
-			weights.write[3] /= renorm;
+		if (renorm > CMP_EPSILON && abs(renorm - 1.0) > CMP_EPSILON) {
+			for (int i = 0; i < 4; ++i) {
+				weights.write[i] /= renorm;
+			}
 		}
 		p_surface->set_weights(weights);
 	}
@@ -235,21 +250,24 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 			BoneId spine_id = skeleton->find_bone(String("Groove"));
 			if (spine_id != -1) {
 				skeleton->set_bone_name(spine_id, "Spine");
-				set_bone_rest_and_parent(skeleton, spine_id, hips_id);
+				skeleton->set_bone_parent(spine_id, hips_id);
 
 				BoneId chest_id = skeleton->find_bone(String("UpperBody"));
 				if (chest_id != -1) {
 					skeleton->set_bone_name(chest_id, "Chest");
-					set_bone_rest_and_parent(skeleton, chest_id, spine_id);
+					skeleton->set_bone_parent(chest_id, spine_id);
 				}
 			}
 			BoneId lower_body_id = skeleton->find_bone(String("LowerBody"));
 			if (lower_body_id != -1) {
-				set_bone_rest_and_parent(skeleton, lower_body_id, hips_id);
+				skeleton->set_bone_parent(lower_body_id, hips_id);
 			}
-			set_bone_rest_and_parent(skeleton, hips_id, root_id);
+			skeleton->set_bone_parent(hips_id, root_id);
 		}
 	}
+	String unused_bone_name = "UnusedBone";
+	skeleton->add_bone(unused_bone_name);
+	BoneId unused_bone_index = skeleton->find_bone(unused_bone_name);
 	root->add_child(skeleton, true);
 	skeleton->set_owner(root);
 
@@ -294,39 +312,43 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 
 	uint32_t face_start = 0;
 	std::vector<std::unique_ptr<mmd_pmx_t::vertex_t>> *vertices = pmx.vertices();
-
 	if (vertices->size()) {
 		LocalVector<String> blend_shapes;
 		for (uint32_t morph_i = 0; morph_i < pmx.morph_count(); ++morph_i) {
-			String name = convert_string(
-					pmx.morphs()->at(morph_i).get()->english_name()->value(), pmx.header()->encoding());
+			String name = convert_string(pmx.morphs()->at(morph_i).get()->english_name()->value(), pmx.header()->encoding());
 			blend_shapes.push_back(name);
 		}
+
+		uint32_t face_start = 0;
+
 		for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
 			Ref<SurfaceTool> surface;
 			surface.instantiate();
 			surface->begin(Mesh::PRIMITIVE_TRIANGLES);
 			std::vector<std::unique_ptr<mmd_pmx_t::face_t>> *faces = pmx.faces();
+
 			if (!faces || !faces->size()) {
 				continue;
 			}
+
 			uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
 
-			// Add the vertices directly without indices
 			for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
-				if (face_i >= faces->size() || !faces->at(face_i).get()) {
+				if (face_i >= faces->size() || !faces->at(face_i)) {
 					continue;
 				}
+
 				for (int i = 0; i < 3; i++) {
 					auto index_ptr = faces->at(face_i)->indices()->at(i).get();
 					if (!is_valid_index(index_ptr)) {
 						continue;
 					}
+
 					uint32_t index = index_ptr->value();
 					if (index >= vertices->size()) {
 						continue;
 					}
-					add_vertex(surface, vertices->at(index).get());
+					add_vertex(surface, vertices->at(index).get(), unused_bone_index);
 				}
 			}
 
@@ -343,8 +365,6 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 			mesh.instantiate();
 			mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, blend_shape_data, Dictionary(), material, name);
 			face_start = face_end;
-
-			// Create a new ImporterMeshInstance3D for each new mesh
 			ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
 			skeleton->add_child(mesh_3d, true);
 			mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
@@ -376,27 +396,6 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		static_body_3d->set_owner(root);
 	}
 	return root;
-}
-
-void EditorSceneImporterMMDPMX::set_bone_rest_and_parent(Skeleton3D *p_skeleton, int32_t p_bone_id, int32_t p_parent_id) {
-	ERR_FAIL_NULL(p_skeleton);
-	ERR_FAIL_COND(p_bone_id == -1);
-
-	Transform3D bone_global_pose = p_skeleton->get_bone_global_pose(p_bone_id);
-	Transform3D new_bone_rest_pose;
-
-	if (p_parent_id != -1) {
-		Transform3D parent_global_pose_inverse = p_skeleton->get_bone_global_pose(p_parent_id).affine_inverse();
-		new_bone_rest_pose = parent_global_pose_inverse * bone_global_pose;
-	} else {
-		new_bone_rest_pose = bone_global_pose;
-	}
-
-	p_skeleton->set_bone_rest(p_bone_id, new_bone_rest_pose);
-
-	if (p_parent_id != -1) {
-		p_skeleton->set_bone_parent(p_bone_id, p_parent_id);
-	}
 }
 
 String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const String &p_target, const String &p_path) {
