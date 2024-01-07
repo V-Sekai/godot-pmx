@@ -140,33 +140,9 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t
 					}
 				}
 			} break;
-			case mmd_pmx_t::BONE_TYPE_SDEF: {
-				// TODO implement 2021-09-10 fire
-				mmd_pmx_t::sdef_weights_t *pmx_weights = (mmd_pmx_t::sdef_weights_t *)r_vertex->skin_weights();
-				ERR_FAIL_NULL(pmx_weights);
-				for (uint32_t count = 0; count < 2; count++) {
-					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
-						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
-						weights.write[count] = pmx_weights->weights()->at(count);
-					}
-				}
-			} break;
+			case mmd_pmx_t::BONE_TYPE_SDEF:
 			case mmd_pmx_t::BONE_TYPE_QDEF:
 			default: {
-				// TODO implement 2021-09-10 fire
-				mmd_pmx_t::qdef_weights_t *pmx_weights = (mmd_pmx_t::qdef_weights_t *)r_vertex->skin_weights();
-				ERR_FAIL_NULL(pmx_weights);
-				ERR_FAIL_NULL(pmx_weights->bone_indices());
-				ERR_FAIL_NULL(pmx_weights->weights());
-				for (uint32_t count = 0; count < RS::ARRAY_WEIGHTS_SIZE; count++) {
-					if (is_valid_index(pmx_weights->bone_indices()->at(count).get())) {
-						ERR_FAIL_NULL(pmx_weights->bone_indices()->at(count).get());
-						bones.write[count] = pmx_weights->bone_indices()->at(count)->value();
-						std::vector<float> *weight = pmx_weights->weights();
-						ERR_FAIL_NULL(weight);
-						weights.write[count] = weight->at(count);
-					}
-				}
 			} break;
 		}
 		p_surface->set_bones(bones);
@@ -178,8 +154,8 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t
 			weights.write[3] /= renorm;
 		}
 		p_surface->set_weights(weights);
-		p_surface->add_vertex(point);
 	}
+	p_surface->add_vertex(point);
 }
 
 String EditorSceneImporterMMDPMX::convert_string(const std::string &p_string, uint8_t p_encoding) const {
@@ -405,12 +381,22 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 void EditorSceneImporterMMDPMX::set_bone_rest_and_parent(Skeleton3D *p_skeleton, int32_t p_bone_id, int32_t p_parent_id) {
 	ERR_FAIL_NULL(p_skeleton);
 	ERR_FAIL_COND(p_bone_id == -1);
+
 	Transform3D bone_global_pose = p_skeleton->get_bone_global_pose(p_bone_id);
-	Transform3D parent_global_pose_inverse = p_skeleton->get_bone_global_pose(p_parent_id).affine_inverse();
-	Transform3D new_bone_rest_pose = parent_global_pose_inverse * bone_global_pose;
+	Transform3D new_bone_rest_pose;
+
+	if (p_parent_id != -1) {
+		Transform3D parent_global_pose_inverse = p_skeleton->get_bone_global_pose(p_parent_id).affine_inverse();
+		new_bone_rest_pose = parent_global_pose_inverse * bone_global_pose;
+	} else {
+		new_bone_rest_pose = bone_global_pose;
+	}
 
 	p_skeleton->set_bone_rest(p_bone_id, new_bone_rest_pose);
-	p_skeleton->set_bone_parent(p_bone_id, p_parent_id);
+
+	if (p_parent_id != -1) {
+		p_skeleton->set_bone_parent(p_bone_id, p_parent_id);
+	}
 }
 
 String EditorSceneImporterMMDPMX::find_file_case_insensitive_recursive(const String &p_target, const String &p_path) {
