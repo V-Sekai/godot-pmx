@@ -239,21 +239,23 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	}
 	translate_bones(skeleton);
 	
-	// In MMD, "Center" (センター) is the Center of Gravity (COG) and acts as the object root
-	// This should be treated as "Hips" in standard skeletal hierarchies
-	BoneId center_id = skeleton->find_bone(String("Center"));
+	// Create a root bone at origin to serve as the skeleton root
+	skeleton->add_bone("Root");
+	BoneId root_bone_id = skeleton->find_bone("Root");
+	Transform3D root_transform;
+	// Root bone has no parent (-1)
+	// In MMD, "Hips" (センター) is the Center of Gravity (COG) and acts as the object root
+	// This should be treated as "Hips" in standard skeletal hierarchies, but parented to Root
+	BoneId center_id = skeleton->find_bone(String("Hips"));
 	if (center_id != -1) {
-		skeleton->set_bone_name(center_id, "Hips");
-		
+		skeleton->set_bone_parent(center_id, root_bone_id);
 		// Set up spine hierarchy from the COG/Hips
-		BoneId spine_id = skeleton->find_bone(String("Groove"));
+		BoneId spine_id = skeleton->find_bone(String("Spine"));
 		if (spine_id != -1) {
-			skeleton->set_bone_name(spine_id, "Spine");
 			set_bone_rest_and_parent(skeleton, spine_id, center_id);
 
-			BoneId chest_id = skeleton->find_bone(String("UpperBody"));
+			BoneId chest_id = skeleton->find_bone(String("Chest"));
 			if (chest_id != -1) {
-				skeleton->set_bone_name(chest_id, "Chest");
 				set_bone_rest_and_parent(skeleton, chest_id, spine_id);
 			}
 		}
@@ -265,12 +267,13 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 			set_bone_rest_and_parent(skeleton, lower_body_id, center_id);
 		}
 		
-		// Center/Hips is the root bone (COG) - no parent
-		set_bone_rest_and_parent(skeleton, center_id, -1);
+		// Center/Hips is parented to the Root bone
+		set_bone_rest_and_parent(skeleton, center_id, root_bone_id);
 	}
 	String unused_bone_name = "UnusedBone";
 	skeleton->add_bone(unused_bone_name);
 	BoneId unused_bone_index = skeleton->find_bone(unused_bone_name);
+	skeleton->set_bone_parent(unused_bone_index, root_bone_id);
 	root->add_child(skeleton, true);
 	skeleton->set_owner(root);
 
@@ -439,12 +442,12 @@ void EditorSceneImporterMMDPMX::translate_bones(Skeleton3D *p_skeleton) {
 
 	japanese_to_english.insert(U"全ての親", U"ParentNode");
 	japanese_to_english.insert(U"操作中心", U"ControlNode");
-	japanese_to_english.insert(U"センター", U"Center");
-	japanese_to_english.insert(U"ｾﾝﾀｰ", U"Center");
+	japanese_to_english.insert(U"センター", U"Hips");
+	japanese_to_english.insert(U"ｾﾝﾀｰ", U"Hips");
 	japanese_to_english.insert(U"グループ", U"Group");
-	japanese_to_english.insert(U"グルーブ", U"Groove");
+	japanese_to_english.insert(U"グルーブ", U"Spine");
 	japanese_to_english.insert(U"キャンセル", U"Cancel");
-	japanese_to_english.insert(U"上半身", U"UpperBody");
+	japanese_to_english.insert(U"上半身", U"Chest");
 	japanese_to_english.insert(U"下半身", U"LowerBody");
 	japanese_to_english.insert(U"手首", U"Wrist");
 	japanese_to_english.insert(U"足首", U"Ankle");
