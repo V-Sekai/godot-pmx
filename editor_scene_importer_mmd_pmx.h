@@ -28,8 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef EDITOR_SCENE_IMPORTER_MMD_PMX_H
-#define EDITOR_SCENE_IMPORTER_MMD_PMX_H
+#pragma once
 
 #include "editor/import/3d/resource_importer_scene.h"
 #include "scene/3d/skeleton_3d.h"
@@ -64,5 +63,3 @@ public:
 class PMXMMDState : public Resource {
 	GDCLASS(PMXMMDState, Resource);
 };
-
-#endif // EDITOR_SCENE_IMPORTER_MMD_PMX_H
