@@ -40,11 +40,12 @@
 #include "scene/3d/importer_mesh_instance_3d.h"
 #include "scene/3d/mesh_instance_3d.h"
 #include "scene/3d/node_3d.h"
-#include "scene/3d/physics_body_3d.h"
+#include "scene/3d/physics/physics_body_3d.h"
+#include "scene/3d/physics/static_body_3d.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
 #include "scene/resources/animation.h"
-#include "scene/resources/importer_mesh.h"
+#include "scene/resources/3d/importer_mesh.h"
 #include "scene/resources/surface_tool.h"
 
 #include <cstdint>
@@ -52,10 +53,6 @@
 #include <string>
 
 #include "thirdparty/ksy/mmd_pmx.h"
-
-uint32_t EditorSceneImporterMMDPMX::get_import_flags() const {
-	return IMPORT_SCENE;
-}
 
 void EditorSceneImporterMMDPMX::get_extensions(List<String> *r_extensions) const {
 	r_extensions->push_back("pmx");
@@ -182,12 +179,12 @@ String EditorSceneImporterMMDPMX::convert_string(const std::string &p_string, ui
 		const char *str_data = p_string.c_str();
 		if (str_data != nullptr) {
 			memcpy(buf.ptrw(), str_data, str_len / 2 * sizeof(char16_t));
-			output.parse_utf16(buf.ptr(), buf.size());
+			output.append_utf16(buf.ptr(), buf.size());
 		}
 	} else if (!p_string.empty()) {
 		const char *str_data = p_string.data();
 		if (str_data != nullptr) {
-			output.parse_utf8(str_data, p_string.size());
+			output.append_utf8(str_data, p_string.size());
 		}
 	}
 	return output;

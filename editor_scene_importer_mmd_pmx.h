@@ -53,7 +53,6 @@ class EditorSceneImporterMMDPMX : public EditorSceneFormatImporter {
 	void set_bone_rest_and_parent(Skeleton3D *p_skeleton, int32_t p_bone_id, int32_t p_parent_id);
 
 public:
-	virtual uint32_t get_import_flags() const override;
 	virtual void get_extensions(List<String> *r_extensions) const override;
 	virtual Node *import_scene(const String &p_path, uint32_t p_flags, const HashMap<StringName, Variant> &p_options,
 			List<String> *r_missing_deps = nullptr,
