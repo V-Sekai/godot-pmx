@@ -244,7 +244,7 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 	BoneId root_bone_id = skeleton->find_bone("Root");
 	Transform3D root_transform;
 	// Root bone has no parent (-1)
-	// In MMD, "Hips" (センター) is the Center of Gravity (COG) and acts as the object root
+	// In MMD, "Center" (センター) is the Center of Gravity (COG) and acts as the object root
 	// This should be treated as "Hips" in standard skeletal hierarchies, but parented to Root
 	BoneId center_id = skeleton->find_bone(String("Hips"));
 	if (center_id != -1) {
