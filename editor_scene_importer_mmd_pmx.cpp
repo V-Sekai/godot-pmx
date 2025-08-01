@@ -238,26 +238,35 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		}
 	}
 	translate_bones(skeleton);
-	BoneId root_id = skeleton->find_bone(String("ParentNode"));
-	if (root_id != -1) {
-		skeleton->set_bone_name(root_id, "Root");
-		BoneId hips_id = skeleton->find_bone(String("LowerBody"));
-		if (hips_id != -1) {
-			skeleton->set_bone_name(hips_id, "Hips");
-			BoneId spine_id = skeleton->find_bone(String("Groove"));
-			if (spine_id != -1) {
-				skeleton->set_bone_name(spine_id, "Spine");
-				set_bone_rest_and_parent(skeleton, spine_id, hips_id);
+	
+	// In MMD, "Center" (センター) is the Center of Gravity (COG) and acts as the object root
+	// This should be treated as "Hips" in standard skeletal hierarchies
+	BoneId center_id = skeleton->find_bone(String("Center"));
+	if (center_id != -1) {
+		skeleton->set_bone_name(center_id, "Hips");
+		
+		// Set up spine hierarchy from the COG/Hips
+		BoneId spine_id = skeleton->find_bone(String("Groove"));
+		if (spine_id != -1) {
+			skeleton->set_bone_name(spine_id, "Spine");
+			set_bone_rest_and_parent(skeleton, spine_id, center_id);
 
-				BoneId chest_id = skeleton->find_bone(String("UpperBody"));
-				if (chest_id != -1) {
-					skeleton->set_bone_name(chest_id, "Chest");
-					set_bone_rest_and_parent(skeleton, chest_id, spine_id);
-				}
+			BoneId chest_id = skeleton->find_bone(String("UpperBody"));
+			if (chest_id != -1) {
+				skeleton->set_bone_name(chest_id, "Chest");
+				set_bone_rest_and_parent(skeleton, chest_id, spine_id);
 			}
-			set_bone_rest_and_parent(skeleton, hips_id, root_id);
 		}
-		set_bone_rest_and_parent(skeleton, root_id, -1);
+		
+		// Handle LowerBody if it exists separately from Center
+		BoneId lower_body_id = skeleton->find_bone(String("LowerBody"));
+		if (lower_body_id != -1 && lower_body_id != center_id) {
+			skeleton->set_bone_name(lower_body_id, "LowerHips");
+			set_bone_rest_and_parent(skeleton, lower_body_id, center_id);
+		}
+		
+		// Center/Hips is the root bone (COG) - no parent
+		set_bone_rest_and_parent(skeleton, center_id, -1);
 	}
 	String unused_bone_name = "UnusedBone";
 	skeleton->add_bone(unused_bone_name);
