@@ -46,6 +46,7 @@ class EditorSceneImporterMMDPMX : public EditorSceneFormatImporter {
 	const real_t mmd_unit_conversion = 0.079f;
 	void add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t::vertex_t *r_vertex, BoneId p_unused_bone) const;
 	bool is_valid_index(mmd_pmx_t::sized_index_t *p_index) const;
+	Vector3 pmx_vec3_to_vector3d(const mmd_pmx_t::vec3_t *vector) const;
 	String convert_string(const std::string &p_string, uint8_t p_encoding) const;
 	virtual Node *import_mmd_pmx_scene(const String &p_path, uint32_t p_flags, float p_bake_fps, Ref<PMXMMDState> r_state);
 	String find_file_case_insensitive_recursive(const String &p_target, const String &p_path);

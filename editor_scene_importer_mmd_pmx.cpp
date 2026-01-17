@@ -44,7 +44,6 @@
 #include "scene/3d/physics/static_body_3d.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
-#include "scene/resources/animation.h"
 #include "scene/resources/3d/importer_mesh.h"
 #include "scene/resources/surface_tool.h"
 
@@ -78,8 +77,16 @@ bool EditorSceneImporterMMDPMX::is_valid_index(mmd_pmx_t::sized_index_t *p_index
 	}
 }
 
+Vector3 EditorSceneImporterMMDPMX::pmx_vec3_to_vector3d(const mmd_pmx_t::vec3_t *vector) const {
+	return {
+		vector->x() * mmd_unit_conversion,
+		vector->y() * mmd_unit_conversion,
+		vector->z() * mmd_unit_conversion * -1
+	};
+}
+
 void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t::vertex_t *r_vertex, BoneId p_unused_bone) const {
-	ERR_FAIL_NULL(p_surface);
+	ERR_FAIL_COND(p_surface.is_null());
 	ERR_FAIL_NULL(r_vertex);
 	ERR_FAIL_NULL(r_vertex->normal());
 	Vector3 normal = Vector3(r_vertex->normal()->x(),
@@ -92,10 +99,7 @@ void EditorSceneImporterMMDPMX::add_vertex(Ref<SurfaceTool> p_surface, mmd_pmx_t
 			r_vertex->uv()->y());
 	p_surface->set_uv(uv);
 	ERR_FAIL_NULL(r_vertex->position());
-	Vector3 point = Vector3(r_vertex->position()->x() * mmd_unit_conversion,
-			r_vertex->position()->y() * mmd_unit_conversion,
-			r_vertex->position()->z() * mmd_unit_conversion);
-	point.z = -point.z;
+	Vector3 point = pmx_vec3_to_vector3d(r_vertex->position());
 	PackedInt32Array bones;
 	bones.push_back(p_unused_bone);
 	bones.push_back(p_unused_bone);
@@ -238,11 +242,10 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		}
 	}
 	translate_bones(skeleton);
-	
+
 	// Create a root bone at origin to serve as the skeleton root
 	skeleton->add_bone("Root");
 	BoneId root_bone_id = skeleton->find_bone("Root");
-	Transform3D root_transform;
 	// Root bone has no parent (-1)
 	// In MMD, "Center" (センター) is the Center of Gravity (COG) and acts as the object root
 	// This should be treated as "Hips" in standard skeletal hierarchies, but parented to Root
@@ -259,14 +262,14 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 				set_bone_rest_and_parent(skeleton, chest_id, spine_id);
 			}
 		}
-		
+
 		// Handle LowerBody if it exists separately from Center
 		BoneId lower_body_id = skeleton->find_bone(String("LowerBody"));
 		if (lower_body_id != -1 && lower_body_id != center_id) {
 			skeleton->set_bone_name(lower_body_id, "LowerHips");
 			set_bone_rest_and_parent(skeleton, lower_body_id, center_id);
 		}
-		
+
 		// Center/Hips is parented to the Root bone
 		set_bone_rest_and_parent(skeleton, center_id, root_bone_id);
 	}
@@ -308,6 +311,7 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 		int32_t texture_index = materials->at(material_cache_i)->texture_index()->value();
 		if (is_valid_index(materials->at(material_cache_i)->texture_index()) && texture_index < texture_cache.size() && !texture_cache[texture_index].is_null()) {
 			material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture_cache[texture_index]);
+			material->set_transparency(StandardMaterial3D::TRANSPARENCY_ALPHA_DEPTH_PRE_PASS);
 		}
 		mmd_pmx_t::color4_t *diffuse = materials->at(material_cache_i)->diffuse();
 		material->set_albedo(Color(diffuse->r(), diffuse->g(), diffuse->b(), diffuse->a()));
@@ -318,12 +322,21 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 
 	uint32_t face_start = 0;
 	std::vector<std::unique_ptr<mmd_pmx_t::vertex_t>> *vertices = pmx.vertices();
+
 	if (vertices->size()) {
+		Ref<ImporterMesh> mesh;
+		mesh.instantiate();
+
 		LocalVector<String> blend_shapes;
 		for (uint32_t morph_i = 0; morph_i < pmx.morph_count(); ++morph_i) {
-			String name = convert_string(pmx.morphs()->at(morph_i).get()->english_name()->value(), pmx.header()->encoding());
+			String name = convert_string(pmx.morphs()->at(morph_i)->english_name()->value(), pmx.header()->encoding());
 			blend_shapes.push_back(name);
+			if (pmx.morphs()->at(morph_i)->type() == mmd_pmx_t::MORPH_TYPE_VERTEX) {
+				mesh->add_blend_shape(name);
+			}
 		}
+		mesh->set_blend_shape_mode(Mesh::BLEND_SHAPE_MODE_RELATIVE);
+
 		for (uint32_t material_i = 0; material_i < pmx.material_count(); material_i++) {
 			Ref<SurfaceTool> surface;
 			surface.instantiate();
@@ -336,6 +349,8 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 
 			uint32_t face_end = face_start + materials->at(material_i)->face_vertex_count() / 3;
 
+			HashMap<uint32_t, Vector<uint32_t>> pmx_to_mesh_idx;
+
 			for (uint32_t face_i = face_start; face_i < face_end; face_i++) {
 				if (face_i >= faces->size() || !faces->at(face_i)) {
 					continue;
@@ -346,12 +361,17 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 					if (!is_valid_index(index_ptr)) {
 						continue;
 					}
-
 					uint32_t index = index_ptr->value();
 					if (index >= vertices->size()) {
 						continue;
 					}
+					uint32_t current_index = (face_i - face_start) * 3 + i;
+					surface->add_index(current_index);
 					add_vertex(surface, vertices->at(index).get(), unused_bone_index);
+					if (!pmx_to_mesh_idx.has(index)) {
+						pmx_to_mesh_idx[index] = Vector<uint32_t>();
+					}
+					pmx_to_mesh_idx[index].append(current_index);
 				}
 			}
 
@@ -364,18 +384,45 @@ Node *EditorSceneImporterMMDPMX::import_mmd_pmx_scene(const String &p_path, uint
 
 			Array blend_shape_data;
 
-			Ref<ImporterMesh> mesh;
-			mesh.instantiate();
+			for (uint32_t bs_i = 0; bs_i < blend_shapes.size(); bs_i++) {
+				Array bs_vertex_array;
+				Array mesh_vertex_array = mesh_array[Mesh::ARRAY_VERTEX];
+				bs_vertex_array.resize(mesh_vertex_array.size());
+				auto morph = pmx.morphs()->at(bs_i).get();
+				if (morph->type() == mmd_pmx_t::MORPH_TYPE_VERTEX) {
+					for (uint32_t morph_vertex_idx = 0; morph_vertex_idx < morph->element_count(); ++morph_vertex_idx) {
+						auto vertex_morph = dynamic_cast<mmd_pmx_t::vertex_morph_element_t *>(morph->elements()->at(morph_vertex_idx).get());
+						if (!pmx_to_mesh_idx.has(vertex_morph->index()->value())) {
+							continue;
+						}
+						auto vector = pmx_vec3_to_vector3d(vertex_morph->position());
+
+						auto vertex_list = pmx_to_mesh_idx[vertex_morph->index()->value()];
+						for (int i = 0; i < vertex_list.size(); ++i) {
+							bs_vertex_array[vertex_list[i]] = vector;
+						}
+					}
+					Array current_blend_shape;
+
+					current_blend_shape.resize(Mesh::ARRAY_MAX);
+					current_blend_shape[Mesh::ARRAY_VERTEX] = bs_vertex_array;
+					current_blend_shape[Mesh::ARRAY_NORMAL] = mesh_array[Mesh::ARRAY_NORMAL];
+					current_blend_shape[Mesh::ARRAY_TANGENT] = mesh_array[Mesh::ARRAY_TANGENT];
+
+					blend_shape_data.push_back(current_blend_shape);
+				}
+			}
 			mesh->add_surface(Mesh::PRIMITIVE_TRIANGLES, mesh_array, blend_shape_data, Dictionary(), material, name);
 			face_start = face_end;
-			ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
-			skeleton->add_child(mesh_3d, true);
-			mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
-			mesh_3d->set_mesh(mesh);
-			mesh_3d->set_owner(root);
-			mesh_3d->set_skeleton_path(mesh_3d->get_path_to(skeleton));
-			mesh_3d->set_name(name);
 		}
+
+		ImporterMeshInstance3D *mesh_3d = memnew(ImporterMeshInstance3D);
+		skeleton->add_child(mesh_3d, true);
+		mesh_3d->set_skin(skeleton->register_skin(skeleton->create_skin_from_rest_transforms())->get_skin());
+		mesh_3d->set_mesh(mesh);
+		mesh_3d->set_owner(root);
+		mesh_3d->set_skeleton_path(mesh_3d->get_path_to(skeleton));
+		mesh_3d->set_name("Mesh");
 	}
 
 	std::vector<std::unique_ptr<mmd_pmx_t::rigid_body_t>> *rigid_bodies = pmx.rigid_bodies();
@@ -567,6 +614,7 @@ void EditorSceneImporterMMDPMX::translate_bones(Skeleton3D *p_skeleton) {
 		p_skeleton->set_bone_name(i, bone_name);
 	}
 }
+
 void EditorSceneImporterMMDPMX::set_bone_rest_and_parent(Skeleton3D *p_skeleton, int32_t p_bone_id, int32_t p_parent_id) {
 	ERR_FAIL_NULL(p_skeleton);
 	ERR_FAIL_COND(p_bone_id == -1);
