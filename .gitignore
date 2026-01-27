@@ -1,6 +1,7 @@
 *.os
 *.obj
 *~
+.idea
 /.compile_commands.json
 /.sconsign.dblite
 /.cache/
