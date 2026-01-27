@@ -1,47 +1,28 @@
-# MMD asset importer Plugin for Godot
+# MMD asset importer for Godot
 
-## What is this?
+## What is it?
 
-A Godot 4.6 Plugin for importing Miku Miku Dance Files into Godot. Based on [Godot PMX importer](https://github.com/seanlynch/godot_pmx_importer) module
-
-The objective is to import MMD files to be able to render and work with MMD assets inside godot
-
-### PMX:
-- [x] Skeleton
-- [x] Mesh
-- [ ] Morphs
-  - Only vertex morphs are imported
-- [x] Materials
-  - Only basic textured materials are created
-- [ ] IK
-  - This is under development.
-- [ ] Bone Parent
-  - This is under development.
-- [ ] Physics
-  - For now, use bone modifiers. See below
-
-### VMD (under development):
-- Morphs and Motion data has been imported
-  - Interpolation is under development
+A Godot 4.0 module that imports MMD assets. It currently has
+incomplete support for PMX models, but we intend to add at least VMD
+motions as well.
 
 ## How do I use it?
 
-Build, then copy the Plugin `addons` folder into your godot `addons` folder,
-Activate the plugin in project settings,
-then import your MMD files
+We develop against Godot's `master` branch, so first check that out
+with Git and make sure you can compile it. Then clone this repository
+as `modules/pmx` under the Godot root and build again. At that point
+you should be able to import PMX models inside your Godot project
+folders. They will show up as packed scenes.
 
-## Physics
+## How can I help?
 
-To implement physics simulation you can add bone modifiers (like SpringBones)
-This may require tuning
+Use it! Open issues for bugs and feature requests. Send us a PR. Chat
+with us on V-Sekai's Discord server in `#animation`.
 
-Eventually, a custom bone modifier system could be added to replicate MMD Rigid Body system
+## Why Godot 4.0?
 
-
-## Credits and thanks
-- Sean Lynch and iFire
-For working in the original PMX importer module
-
-- Lyuma, Tokage and IFire from the V-Sekai discord for their help
-
-
+We only have so much free time, and Godot 3.x lacks support for custom
+arrays, which makes support of dual quaternion skinning (QDEF) or
+spherical blend skinning (SDEF) more difficult. We will consider
+accepting PRs to add 3.x support if it looks like it will not be too
+difficult to maintain or someone commits to maintaining it.
